@@ -1,0 +1,428 @@
+
+
+     FOREST VEGETATION SIMULATOR     VERSION FS2024.3 -- S. CEN. OREGON/N.E. CALIF. PROGNOSIS   RV:20240701    06-20-2025  17:15:19
+
+----------------------------------------------------------------------------------------------------------------------------------
+
+                                                OPTIONS SELECTED BY INPUT
+
+KEYWORD FILE NAME: /home/ddiaz/projects/fvs2py/fvs2py/tests/keyfiles/SO
+----------------------------------------------------------------------------------------------------------------------------------
+KEYWORD    PARAMETERS:
+--------   -----------------------------------------------------------------------------------------------------------------------
+
+STDIDENT
+           STAND ID= 12345                             TEST                                                                    
+
+           PLANT COMMUNITY CODE USED IN THIS PROJECTION IS CDS612  
+
+STDINFO    FOREST-LOCATION CODE=     601; HABITAT TYPE=407; AGE=    1; ASPECT AZIMUTH IN DEGREES=   0.; SLOPE=   5.%
+           ELEVATION(100'S FEET)= 45.0; REFERENCE CODE=     
+
+DESIGN     BASAL AREA FACTOR=   -1.0; INVERSE OF FIXED PLOT AREA=    1.0; BREAK DBH=    5.0
+           NUMBER OF PLOTS=     0; NON-STOCKABLE PLOTS=     0; STAND SAMPLING WEIGHT=     0.00000
+           PROPORTION OF STAND CONSIDERED STOCKABLE=  1.000
+           SEE "OPTIONS SELECTED BY DEFAULT" FOR FINAL DESIGN VALUES.
+
+INVYEAR    INVENTORY YEAR= 1990
+
+NUMCYCLE   NUMBER OF CYCLES= 10
+
+TREEFMT 
+          (I4,I4,F6.0,I1,A3,F4.1,F3.1,2F3.0,F4.1,I1,                                      
+          6I2,2I1,I2,2I3,2I1,F3.0)                                                        
+
+TREEDATA   DATA SET REFERENCE NUMBER= 15
+
+
+           NOTE: INPUT SPECIES CODE (1       )WAS SET TO (OH  ) FOR THIS PROJECTION.
+           NOTE: INPUT SPECIES CODE (2       )WAS SET TO (OH  ) FOR THIS PROJECTION.
+
+PROCESS    PROCESS THE STAND.
+----------------------------------------------------------------------------------------------------------------------------------
+
+                                                OPTIONS SELECTED BY DEFAULT
+
+----------------------------------------------------------------------------------------------------------------------------------
+
+DESIGN     BASAL AREA FACTOR=   -1.0; INVERSE OF FIXED PLOT AREA=    1.0; BREAK DBH=    5.0
+           NUMBER OF PLOTS=     1; NON-STOCKABLE PLOTS=     0; STAND SAMPLING WEIGHT=     1.00000
+           PROPORTION OF STAND CONSIDERED STOCKABLE=  1.000
+
+STDINFO    FOREST-LOCATION CODE=     601; HABITAT TYPE=407; AGE=    1; ASPECT AZIMUTH IN DEGREES=   0.; SLOPE=   5.%
+           ELEVATION(100'S FEET)= 45.0;  REFERENCE CODE=     
+
+SPECIES      WP      SP      DF      WF      MH      IC      LP      ES      SH      PP
+SDI MAX     440.    440.    755.    649.    746.    440.    533.    649.    738.    422.
+
+SPECIES      WJ      GF      AF      SF      NF      WB      WL      RC      WH      PY
+SDI MAX     492.    649.    649.    649.    649.    246.    246.    640.    640.    640.
+
+SPECIES      WA      RA      BM      AS      CW      CH      WO      WI      GC      MC
+SDI MAX     197.    295.    295.    246.    246.    197.    197.    148.    246.     98.
+
+SPECIES      MB      OS      OH
+SDI MAX      98.    440.    246.
+
+                                  NATIONAL VOLUME ESTIMATOR LIBRARY EQUATION NUMBERS
+SPECIES CUBIC FOOT BOARD FOOT SPECIES CUBIC FOOT BOARD FOOT SPECIES CUBIC FOOT BOARD FOOT SPECIES CUBIC FOOT BOARD FOOT 
+------- ---------- ---------- ------- ---------- ---------- ------- ---------- ---------- ------- ---------- ---------- 
+  WP    616BEHW119 616BEHW119   SP    616BEHW117 616BEHW117   DF    I11FW2W202 I11FW2W202   WF    I00FW2W017 I00FW2W017
+  MH    616BEHW264 616BEHW264   IC    I11FW2W242 I11FW2W242   LP    I11FW2W108 I11FW2W108   ES    616BEHW093 616BEHW093
+  SH    I00FW2W017 I00FW2W017   PP    I11FW2W122 I11FW2W122   WJ    616BEHW064 616BEHW064   GF    I00FW2W017 I00FW2W017
+  AF    616BEHW019 616BEHW019   SF    I00FW2W017 I00FW2W017   NF    616BEHW022 616BEHW022   WB    616BEHW101 616BEHW101
+  WL    I11FW2W073 I11FW2W073   RC    616BEHW242 616BEHW242   WH    616BEHW263 616BEHW263   PY    616BEHW231 616BEHW231
+  WA    616BEHW352 616BEHW352   RA    616BEHW351 616BEHW351   BM    616BEHW312 616BEHW312   AS    616BEHW746 616BEHW746
+  CW    616BEHW747 616BEHW747   CH    616BEHW768 616BEHW768   WO    616BEHW815 616BEHW815   WI    616BEHW920 616BEHW920
+  GC    616BEHW431 616BEHW431   MC    616BEHW475 616BEHW475   MB    616BEHW478 616BEHW478   OS    616BEHW299 616BEHW299
+  OH    616BEHW998 616BEHW998
+
+SITECODE   SITE INDEX INFORMATION:
+            WP=   90.;  SP=  125.;  DF=   85.;  WF=   82.;  MH=   28.;  IC=   82.;  LP=   84.;  ES=  125.; SH=   82.
+            PP=  125.;  WJ=   23.;  GF=   82.;  AF=  125.;  SF=   82.;  NF=  125.;  WB=   43.;  WL=   82.; RC=  129.
+            WH=   82.;  PY=  125.;  WA=  125.;  RA=   36.;  BM=  125.;  AS=   48.;  CW=  125.;  CH=  125.; WO=   82.
+            WI=  125.;  GC=  125.;  MC=  125.;  MB=  125.;  OS=   82.;  OH=  125.
+           SITE SPECIES=DF CODE=    3
+
+INVENTORY POINT CROSS REFERENCE (FVS SEQUENTIAL POINT NUMBER = POINT NUMBER AS ENTERED IN THE INPUT DATA):
+  1=     101
+----------------------------------------------------------------------------------------------------------------------------------
+
+
+                                                     ACTIVITY SCHEDULE
+
+STAND ID= 12345                         MGMT ID= NONE    TEST                                                                    
+
+----------------------------------------------------------------------------------------------------------------------------------
+
+CYCLE  DATE  EXTENSION  KEYWORD   DATE  PARAMETERS:
+-----  ----  ---------  --------  ----  ------------------------------------------------------------------------------------------
+
+   1   1990
+   2   2000
+   3   2010
+   4   2020
+   5   2030
+   6   2040
+   7   2050
+   8   2060
+   9   2070
+  10   2080
+----------------------------------------------------------------------------------------------------------------------------------
+
+
+CALIBRATION STATISTICS:
+
+
+                                                 OH
+                                                ----
+
+NUMBER OF RECORDS PER SPECIES                      2
+
+NUMBER OF RECORDS WITH MISSING HEIGHTS             2
+
+NUMBER OF RECORDS WITH BROKEN OR DEAD TOPS         0
+
+NUMBER OF RECORDS WITH MISSING CROWN RATIOS        2
+
+NUMBER OF RECORDS AVAILABLE FOR SCALING
+THE DIAMETER INCREMENT MODEL                       0
+
+RATIO OF STANDARD ERRORS
+(INPUT DBH GROWTH DATA : MODEL)                 1.00
+
+WEIGHT GIVEN TO THE INPUT GROWTH DATA WHEN
+DBH GROWTH MODEL SCALE FACTORS WERE COMPUTED    0.00
+
+INITIAL SCALE FACTORS FOR THE
+DBH INCREMENT MODEL                             1.00
+
+NUMBER OF RECORDS AVAILABLE FOR SCALING
+THE SMALL TREE HEIGHT INCREMENT MODEL             0
+
+INITIAL SCALE FACTORS FOR THE SMALL TREE
+HEIGHT INCREMENT MODEL                          1.00
+
+NUMBER OF RECORDS WITH MISTLETOE                   0
+
+
+     FOREST VEGETATION SIMULATOR     VERSION FS2024.3 -- S. CEN. OREGON/N.E. CALIF. PROGNOSIS   RV:20240701    06-20-2025  17:15:36
+
+STAND ID: 12345                         MGMT ID: NONE    TEST
+
+
+                                        STAND COMPOSITION (BASED ON STOCKABLE AREA)
+--------------------------------------------------------------------------------------------------------------------------
+                            PERCENTILE POINTS IN THE
+                     DISTRIBUTION OF STAND ATTRIBUTES BY DBH      TOTAL/ACRE
+        STAND       -----------------------------------------      OF STAND         DISTRIBUTION OF STAND ATTRIBUTES BY
+YEAR  ATTRIBUTES      10     30     50     70     90    100       ATTRIBUTES       SPECIES AND 3 USER-DEFINED SUBCLASSES
+----  -----------   ------ ------ ------ ------ ------ ------   --------------  ------------------------------------------
+                                 (DBH IN INCHES)
+
+
+
+1990  TREES           4.1    4.1    4.1    5.1    5.1     5.1     100. TREES    100.% OH1,   0.% ---,   0.% ---,   0.% ---
+      VOLUME:  
+        TOTAL         4.1    4.1    5.1    5.1    5.1     5.1     174. CUFT     100.% OH1,   0.% ---,   0.% ---,   0.% ---
+        MERCH         5.1    5.1    5.1    5.1    5.1     5.1       0. CUFT       0.% ---,   0.% ---,   0.% ---,   0.% ---
+        MERCH         5.1    5.1    5.1    5.1    5.1     5.1       0. BDFT       0.% ---,   0.% ---,   0.% ---,   0.% ---
+
+
+      ACCRETION       4.1    4.1    5.1    5.1    5.1     5.1      20. CUFT/YR  100.% OH1,   0.% ---,   0.% ---,   0.% ---
+      MORTALITY       4.1    4.1    4.1    4.1    4.1     5.1       0. CUFT/YR  100.% OH1,   0.% ---,   0.% ---,   0.% ---
+
+
+
+2000  TREES           4.8    4.8    5.7    6.2    7.2     7.2      99. TREES    100.% OH1,   0.% ---,   0.% ---,   0.% ---
+      VOLUME:  
+        TOTAL         4.8    5.4    6.2    6.2    7.2     7.2     371. CUFT     100.% OH1,   0.% ---,   0.% ---,   0.% ---
+        MERCH         7.2    7.2    7.2    7.2    7.2     7.2       0. CUFT       0.% ---,   0.% ---,   0.% ---,   0.% ---
+        MERCH         7.2    7.2    7.2    7.2    7.2     7.2       0. BDFT       0.% ---,   0.% ---,   0.% ---,   0.% ---
+
+
+      ACCRETION       4.8    5.4    6.2    6.2    7.2     7.2      27. CUFT/YR  100.% OH1,   0.% ---,   0.% ---,   0.% ---
+      MORTALITY       4.4    4.8    4.8    5.4    6.2     7.2       0. CUFT/YR  100.% OH1,   0.% ---,   0.% ---,   0.% ---
+
+
+
+2010  TREES           5.4    5.8    6.6    7.2    8.5     9.7      97. TREES    100.% OH1,   0.% ---,   0.% ---,   0.% ---
+      VOLUME:  
+        TOTAL         5.4    6.2    7.2    8.2    8.5     9.7     633. CUFT     100.% OH1,   0.% ---,   0.% ---,   0.% ---
+        MERCH         9.7    9.7    9.7    9.7    9.7     9.7      37. CUFT     100.% OH1,   0.% ---,   0.% ---,   0.% ---
+        MERCH         9.7    9.7    9.7    9.7    9.7     9.7     178. BDFT     100.% OH1,   0.% ---,   0.% ---,   0.% ---
+
+
+      ACCRETION       5.4    6.2    7.2    8.2    8.5     9.7      34. CUFT/YR  100.% OH1,   0.% ---,   0.% ---,   0.% ---
+      MORTALITY       5.1    5.4    6.1    6.7    7.2     9.7       1. CUFT/YR  100.% OH1,   0.% ---,   0.% ---,   0.% ---
+
+
+
+2020  TREES           6.3    6.8    7.5    8.1   10.2    11.1      95. TREES    100.% OH1,   0.% ---,   0.% ---,   0.% ---
+      VOLUME:  
+        TOTAL         6.6    7.3    8.1    9.6   10.2    11.1     964. CUFT     100.% OH1,   0.% ---,   0.% ---,   0.% ---
+        MERCH         9.6    9.6   10.2   10.2   11.1    11.1     307. CUFT     100.% OH1,   0.% ---,   0.% ---,   0.% ---
+        MERCH         9.6    9.6   10.2   10.2   11.1    11.1    1551. BDFT     100.% OH1,   0.% ---,   0.% ---,   0.% ---
+
+
+      ACCRETION       6.6    7.5    8.1    9.6   10.2    11.1      36. CUFT/YR  100.% OH1,   0.% ---,   0.% ---,   0.% ---
+      MORTALITY       5.9    6.6    7.1    7.5    8.1    11.1       1. CUFT/YR  100.% OH1,   0.% ---,   0.% ---,   0.% ---
+
+
+
+2030  TREES           6.6    7.3    8.2    9.0   11.4    12.8      94. TREES    100.% OH1,   0.% ---,   0.% ---,   0.% ---
+      VOLUME:  
+        TOTAL         6.9    8.2    9.0   10.8   11.4    12.8    1316. CUFT     100.% OH1,   0.% ---,   0.% ---,   0.% ---
+        MERCH         9.1   10.8   11.4   11.4   12.8    12.8     533. CUFT     100.% OH1,   0.% ---,   0.% ---,   0.% ---
+        MERCH         9.1   10.8   11.4   11.4   12.8    12.8    2683. BDFT     100.% OH1,   0.% ---,   0.% ---,   0.% ---
+
+
+      ACCRETION       6.9    8.2    9.0   10.8   11.4    12.8      38. CUFT/YR  100.% OH1,   0.% ---,   0.% ---,   0.% ---
+      MORTALITY       6.3    6.9    8.0    8.8    9.1    12.8       2. CUFT/YR  100.% OH1,   0.% ---,   0.% ---,   0.% ---
+
+
+
+2040  TREES           7.3    8.2    8.7    9.6   12.3    14.4      92. TREES    100.% OH1,   0.% ---,   0.% ---,   0.% ---
+      VOLUME:  
+        TOTAL         7.4    8.7    9.6   12.1   12.6    14.4    1682. CUFT     100.% OH1,   0.% ---,   0.% ---,   0.% ---
+        MERCH         9.6    9.6   12.1   12.3   14.4    14.4    1073. CUFT     100.% OH1,   0.% ---,   0.% ---,   0.% ---
+        MERCH         9.6    9.6   12.1   12.3   14.4    14.4    5480. BDFT     100.% OH1,   0.% ---,   0.% ---,   0.% ---
+
+
+      ACCRETION       7.4    9.4    9.8   12.1   12.3    14.4      36. CUFT/YR  100.% OH1,   0.% ---,   0.% ---,   0.% ---
+      MORTALITY       7.3    7.4    8.5    9.5    9.8    14.4       2. CUFT/YR  100.% OH1,   0.% ---,   0.% ---,   0.% ---
+
+
+
+2050  TREES           7.7    8.9   10.2   10.4   14.4    15.6      91. TREES    100.% OH1,   0.% ---,   0.% ---,   0.% ---
+      VOLUME:  
+        TOTAL         7.7    9.5   10.4   13.5   14.4    15.6    2023. CUFT     100.% OH1,   0.% ---,   0.% ---,   0.% ---
+        MERCH         9.4   10.4   13.5   13.6   15.6    15.6    1491. CUFT     100.% OH1,   0.% ---,   0.% ---,   0.% ---
+        MERCH         9.4   10.4   13.5   13.6   15.6    15.6    7807. BDFT     100.% OH1,   0.% ---,   0.% ---,   0.% ---
+
+
+      ACCRETION       7.7    9.0   10.4   13.5   14.4    15.6      39. CUFT/YR  100.% OH1,   0.% ---,   0.% ---,   0.% ---
+      MORTALITY       7.7    8.4    9.0   10.2   10.8    15.6       3. CUFT/YR  100.% OH1,   0.% ---,   0.% ---,   0.% ---
+
+
+
+2060  TREES           8.5    9.6   10.8   11.4   15.9    17.0      89. TREES    100.% OH1,   0.% ---,   0.% ---,   0.% ---
+      VOLUME:  
+        TOTAL         8.5   10.8   11.4   14.6   15.9    17.0    2382. CUFT     100.% OH1,   0.% ---,   0.% ---,   0.% ---
+        MERCH        10.0   11.2   11.4   14.9   15.9    17.0    1991. CUFT     100.% OH1,   0.% ---,   0.% ---,   0.% ---
+        MERCH        10.0   11.2   11.4   14.9   15.9    17.0   10229. BDFT     100.% OH1,   0.% ---,   0.% ---,   0.% ---
+
+
+      ACCRETION       8.5   10.8   11.4   14.6   15.9    17.0      36. CUFT/YR  100.% OH1,   0.% ---,   0.% ---,   0.% ---
+      MORTALITY       8.5    9.1   10.0   10.8   11.4    17.0       3. CUFT/YR  100.% OH1,   0.% ---,   0.% ---,   0.% ---
+
+
+
+2070  TREES           9.2   10.4   11.2   12.7   17.0    18.1      87. TREES    100.% OH1,   0.% ---,   0.% ---,   0.% ---
+      VOLUME:  
+        TOTAL         9.2   11.2   12.7   15.3   17.0    18.1    2707. CUFT     100.% OH1,   0.% ---,   0.% ---,   0.% ---
+        MERCH         9.8   11.5   12.7   15.3   17.0    18.1    2537. CUFT     100.% OH1,   0.% ---,   0.% ---,   0.% ---
+        MERCH         9.2   11.2   12.7   15.3   17.0    18.1   13230. BDFT     100.% OH1,   0.% ---,   0.% ---,   0.% ---
+
+
+      ACCRETION       9.2   10.6   12.7   12.7   17.0    18.1      35. CUFT/YR  100.% OH1,   0.% ---,   0.% ---,   0.% ---
+      MORTALITY       9.2    9.8   10.6   11.5   12.7    18.1       0. CUFT/YR  100.% OH1,   0.% ---,   0.% ---,   0.% ---
+
+
+
+2080  TREES          10.0   10.9   11.9   13.7   17.6    18.8      87. TREES    100.% OH1,   0.% ---,   0.% ---,   0.% ---
+      VOLUME:  
+        TOTAL        10.0   11.9   13.7   16.2   17.6    18.8    3057. CUFT     100.% OH1,   0.% ---,   0.% ---,   0.% ---
+        MERCH        10.4   11.9   13.7   16.2   17.6    18.8    2851. CUFT     100.% OH1,   0.% ---,   0.% ---,   0.% ---
+        MERCH        10.2   12.1   13.7   16.2   17.6    18.8   14836. BDFT     100.% OH1,   0.% ---,   0.% ---,   0.% ---
+
+
+      ACCRETION      10.0   12.1   13.7   13.7   17.6    18.8      46. CUFT/YR  100.% OH1,   0.% ---,   0.% ---,   0.% ---
+      MORTALITY      10.0   10.4   11.6   12.3   13.7    18.8      17. CUFT/YR  100.% OH1,   0.% ---,   0.% ---,   0.% ---
+
+
+
+2090  TREES          11.1   12.3   13.3   15.5   18.6    20.3      81. TREES    100.% OH1,   0.% ---,   0.% ---,   0.% ---
+      VOLUME:  
+        TOTAL        11.1   12.4   15.5   16.5   19.2    20.3    3345. CUFT     100.% OH1,   0.% ---,   0.% ---,   0.% ---
+        MERCH        11.1   12.4   15.5   16.5   19.2    20.3    3267. CUFT     100.% OH1,   0.% ---,   0.% ---,   0.% ---
+        MERCH        11.1   12.8   15.5   16.5   19.2    20.3   17037. BDFT     100.% OH1,   0.% ---,   0.% ---,   0.% ---
+
+
+     FOREST VEGETATION SIMULATOR     VERSION FS2024.3 -- S. CEN. OREGON/N.E. CALIF. PROGNOSIS   RV:20240701    06-20-2025  17:15:36
+
+STAND ID: 12345                         MGMT ID: NONE    TEST
+
+
+------------------------------------------------------------------------------------------------------------------------------
+                     ATTRIBUTES OF SELECTED SAMPLE TREES                 ADDITIONAL STAND ATTRIBUTES (BASED ON STOCKABLE AREA)
+      -----------------------------------------------------------------  -----------------------------------------------------
+      INITIAL                           LIVE   PAST DBH  BASAL   TREES          QUADRATIC   TREES    BASAL  TOP HEIGHT  CROWN
+      TREES/A            DBH    HEIGHT  CROWN   GROWTH   AREA     PER    STAND   MEAN DBH    PER     AREA     LARGEST   COMP
+YEAR   %TILE  SPECIES (INCHES)  (FEET)  RATIO  (INCHES)  %TILE    ACRE   AGE     (INCHES)    ACRE   (SQFT/A) 40/A (FT)  FACTOR
+----  ------- ------- -------- -------- ------ --------- ------- ------  -----  ---------   ------ --------- --------- -------
+
+1990                                          ( 10 YRS)
+
+        10     OH1       4.10    28.52    44     0.34     39.3   50.00
+        30     OH1       4.10    28.52    44     0.34     39.3   50.00
+        50     OH1       4.10    28.52    44     0.34     39.3   50.00
+        70     OH1       5.10    34.06    72     0.71    100.0   50.00
+        90     OH1       5.10    34.06    72     0.71    100.0   50.00
+       100     OH1       5.10    34.06    72     0.71    100.0   50.00
+                                                                           1       4.6      100.      12.       34.1     29.2
+
+2000                                          ( 10 YRS)
+
+        10     OH1       4.77    43.70    40     0.60     25.2   48.54
+        30     OH1       4.77    43.70    40     0.60     25.2   48.54
+        50     OH1       4.77    43.70    40     0.60     25.2   48.54
+        70     OH1       6.19    49.85    65     0.99     79.7   49.97
+        90     OH1       6.19    49.85    65     0.99     79.7   49.97
+       100     OH1       6.19    49.85    65     0.99     79.7   49.97
+                                                                          11       5.7       99.      17.       49.9     39.3
+
+2010                                          ( 10 YRS)
+
+        10     OH1       5.45    58.22    36     0.61     16.7   47.29
+        30     OH1       5.45    58.22    36     0.61     16.7   47.29
+        50     OH1       5.45    58.22    36     0.61     16.7   47.29
+        70     OH1       7.22    64.72    59     0.92     65.2   49.76
+        90     OH1       7.22    64.72    59     0.92     65.2   49.76
+       100     OH1       7.22    64.72    59     0.92     65.2   49.76
+                                                                          21       6.8       97.      24.       64.7     51.0
+
+2020                                          ( 10 YRS)
+
+        10     OH1       6.56    71.32    33     1.00     18.3   46.06
+        30     OH1       6.56    71.32    33     1.00     18.3   46.06
+        50     OH1       6.56    71.32    33     1.00     18.3   46.06
+        70     OH1       8.10    78.25    55     0.79     65.9   49.37
+        90     OH1       8.10    78.25    55     0.79     65.9   49.37
+       100     OH1       8.10    78.25    55     0.79     65.9   49.37
+                                                                          31       7.9       95.      32.       78.3     63.6
+
+2030                                          ( 10 YRS)
+
+        10     OH1       6.95    83.13    33     0.35     16.7   44.84
+        30     OH1       6.95    83.13    33     0.35     16.7   44.84
+        50     OH1       6.95    83.13    33     0.35     16.7   44.84
+        70     OH1       8.95    90.36    50     0.77     57.8   48.98
+        90     OH1       8.95    90.36    50     0.77     57.8   48.98
+       100     OH1       8.95    90.36    50     0.77     57.8   48.98
+                                                                          41       8.7       94.      39.       90.4     74.6
+
+2040                                          ( 10 YRS)
+
+        10     OH1       7.38    93.68    32     0.39     16.1   43.63
+        30     OH1       7.38    93.68    32     0.39     16.1   43.63
+        50     OH1       7.38    93.68    32     0.39     16.1   43.63
+        70     OH1       9.58   100.00    48     0.57     56.2   48.45
+        90     OH1       9.58   100.00    48     0.57     56.2   48.45
+       100     OH1       9.58   100.00    48     0.57     56.2   48.45
+                                                                          51       9.5       92.      46.      100.0     85.3
+
+2050                                          ( 10 YRS)
+
+        10     OH1       7.71   100.00    29     0.29     12.4   42.41
+        30     OH1       7.71   100.00    29     0.29     12.4   42.41
+        50     OH1       7.71   100.00    29     0.29     12.4   42.41
+        70     OH1      10.45   100.10    47     0.78     56.6   47.89
+        90     OH1      10.45   100.10    47     0.78     56.6   47.89
+       100     OH1      10.45   100.10    47     0.78     56.6   47.89
+                                                                          61      10.5       91.      54.      100.1     98.5
+
+2060                                          ( 10 YRS)
+
+        10     OH1       8.49   100.10    28     0.70     12.3   41.16
+        30     OH1       8.49   100.10    28     0.70     12.3   41.16
+        50     OH1       8.49   100.10    28     0.70     12.3   41.16
+        70     OH1      11.44   100.20    47     0.89     58.2   47.34
+        90     OH1      11.44   100.20    47     0.89     58.2   47.34
+       100     OH1      11.44   100.20    47     0.89     58.2   47.34
+                                                                          71      11.5       89.      64.      100.2    113.4
+
+2070                                          ( 10 YRS)
+
+        10     OH1       9.20   100.20    27     0.64     12.1   39.90
+        30     OH1       9.20   100.20    27     0.64     12.1   39.90
+        50     OH1       9.20   100.20    27     0.64     12.1   39.90
+        70     OH1      12.71   100.30    46     1.14     58.4   46.81
+        90     OH1      12.71   100.30    46     1.14     58.4   46.81
+       100     OH1      12.71   100.30    46     1.14     58.4   46.81
+                                                                          81      12.4       87.      73.      100.3    126.7
+
+2080                                          ( 10 YRS)
+
+        10     OH1      10.00   100.30    24     0.72     12.0   39.79
+        30     OH1      10.00   100.30    24     0.72     12.0   39.79
+        50     OH1      10.00   100.30    24     0.72     12.0   39.79
+        70     OH1      13.74   100.40    44     0.93     59.8   46.76
+        90     OH1      13.74   100.40    44     0.93     59.8   46.76
+       100     OH1      13.74   100.40    44     0.93     59.8   46.76
+                                                                          91      13.2       87.      82.      100.4    141.2
+
+2090                                          ( 10 YRS)
+
+        10     OH1      11.05   100.40    24     0.95     12.1   34.90
+        30     OH1      11.05   100.40    24     0.95     12.1   34.90
+        50     OH1      11.05   100.40    24     0.95     12.1   34.90
+        70     OH1      15.53   100.50    44     1.61     61.2   44.72
+        90     OH1      15.53   100.50    44     1.61     61.2   44.72
+       100     OH1      15.53   100.50    44     1.61     61.2   44.72
+                                                                         101      14.3       81.      90.      100.5    151.8
+
+
+     FOREST VEGETATION SIMULATOR     VERSION FS2024.3 -- S. CEN. OREGON/N.E. CALIF. PROGNOSIS   RV:20240701    06-20-2025  17:15:36
+
+STAND ID: 12345                         MGMT ID: NONE    TEST
+
+
+
+                                SUMMARY STATISTICS (PER ACRE OR STAND BASED ON TOTAL STAND AREA)
+--------------------------------------------------------------------------------------------------------------------------------------
+               START OF SIMULATION PERIOD                     REMOVALS             AFTER TREATMENT    GROWTH THIS PERIOD
+         --------------------------------------------- ----------------------- ---------------------  ------------------   MAI  ------
+         NO OF              TOP      TOTAL MERCH MERCH NO OF TOTAL MERCH MERCH              TOP  RES  PERIOD ACCRE MORT   MERCH FOR SS
+YEAR AGE TREES  BA  SDI CCF HT  QMD  CU FT CU FT BD FT TREES CU FT CU FT BD FT  BA  SDI CCF HT   QMD  YEARS   PER  YEAR   CU FT TYP ZT
+---- --- ----- --- ---- --- --- ---- ----- ----- ----- ----- ----- ----- ----- --- ---- --- --- ----  ------ ---- -----   ----- ------
