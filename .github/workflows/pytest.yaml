@@ -1,0 +1,17 @@
+name: Pytest with Docker
+
+on: [pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    container:
+      image: daviddanieldiaz/fvs2py:FS2024.4
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: Install pytest
+      run: pip install pytest pytest-mock
+    
+    - name: Run tests inside container
+      run: pytest .

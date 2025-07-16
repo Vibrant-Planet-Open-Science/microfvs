@@ -1,0 +1,4 @@
+ipykernel==6.29
+mypy==1.15
+pytest==8.3
+ruff==0.11
