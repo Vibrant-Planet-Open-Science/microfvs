@@ -4,14 +4,10 @@ on: [pull_request]
 jobs:
   test:
     runs-on: ubuntu-latest
-    container:
-      image: daviddanieldiaz/microfvs:FS2024.4
-    
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-    - name: Install pytest
-      run: pip install pytest pytest-mock
-    
+    - name: Build Docker image
+      run: docker build -t microfvs:FS2024.4 .
     - name: Run tests inside container
-      run: pytest .
+      run: docker run microfvs:FS2024.4 pytest .
