@@ -38,38 +38,43 @@ def run_fvs(
     """Runs a batch of FVS simulations and returns the result(s).
 
     Args:
-        stand_init (FvsStandInit): Stand initialization data for one or more
-            stands. All stands represented in stand_init will be run in the
-            order specified unless or until `limit` is reached.
-        tree_init (FvsTreeInit, optional): Tree initialization data for one or
-            more stands. If not provided, bare ground will be simulated.
-        limit (int, optional): batch size to which the number of simulations
-            will be capped.
-        treatments (list[FvsEvent], dict[str, list[FvsEvent]], optional):
-            Treatments to be simulated. If specified as a list of FvsEvents, the
-            same set of events will be applied to all stands. Can be specified
-            as a dict with keys referring to stand_ids and dict values
-            corresponding to a list of treatments to apply for that stand. By
-            default, no treatments will be simulated for any stand.
-        disturbances (list[FvsEvent], dict[str, list[FvsEvent]], optional):
-            Disturbances to be simulated. If specified as a list of FvsEvents,
-            the same set of events will be applied to all stands. Can be
-            specified as a dict with keys referring to stand_ids and dict values
-            corresponding to a list of disturbances to apply for that stand. By
-            default, no disturbance will be simulated for any stand.
-        template (str, optional): FVS keyfile template to use. Defaults to
-            FvsKeyfileTemplate.DEFAULT
+        stand_init (FvsStandInit): Stand initialization data for one or
+            more stands. All stands represented in stand_init will be
+            run in the order specified unless or until `limit` is
+            reached.
+        tree_init (FvsTreeInit, optional): Tree initialization data for
+            one or more stands. If not provided, bare ground will be
+            simulated.
+        limit (int, optional): batch size to which the number of
+            simulations will be capped.
+        treatments (list[FvsEvent], dict[str, list[FvsEvent]], optional):  # noqa: W505
+            Treatments to be simulated. If specified as a
+            list of FvsEvents, the same set of events will be applied to
+            all stands. Can be specified as a dict with keys referring
+            to stand_ids and dict values corresponding to a list of
+            treatments to apply for that stand. By default, no
+            treatments will be simulated for any stand.
+        disturbances (list[FvsEvent], dict[str, list[FvsEvent]], optional):  # noqa: W505
+            Disturbances to be simulated. If specified as a
+            list of FvsEvents, the same set of events will be applied to
+            all stands. Can be specified as a dict with keys referring
+            to stand_ids and dict values corresponding to a list of
+            disturbances to apply for that stand. By default,
+            no disturbance will be simulated for any stand.
+        template (str, optional): FVS keyfile template to use. Defaults
+            to FvsKeyfileTemplate.DEFAULT
         template_params (dict, optional):
             Additional parameters to inject into the template
-        stand_stock_params (FvsStandStockParams): Optional set of parameters to
-            govern the generation of a Stand and Stock Table in the FVS
-            outputs. Default is to produce the Stand and Stock Table, and
-            to do so using DBH classes of 4 inches and a large diameter
-            category starting at 48 inches DBH.
+        stand_stock_params (FvsStandStockParams): Optional set of
+            parameters to govern the generation of a Stand and Stock
+            Table in the FVS outputs. Default is to produce the Stand
+            and Stock Table, and to do so using DBH classes of 4 inches
+            and a large diameter category starting at 48 inches DBH.
 
     Returns:
-        A single FvsResult (if `limit=1`) or a list of FvsResults if limit > 1.
-    """
+        A single FvsResult (if `limit`=1) or a list of FvsResults if
+        `limit` > 1.
+    """  # noqa: W505
     results: list[FvsResult] = []
 
     stand_init_df = pd.DataFrame.from_records([stand_init.model_dump()])
