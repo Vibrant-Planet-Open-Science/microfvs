@@ -1,4 +1,4 @@
-"""Helper functions for generating the FVS Stand Stock table from output treelists."""
+"""Helper functions for generating the FVS Stand Stock table."""
 
 from __future__ import annotations
 
@@ -115,12 +115,12 @@ def _make_diameter_class_bins(
 ) -> np.array:
     """Makes diameter class bins.
 
-    Creates an array of bin edges starting from 0 to np.inf, with last bin spanning from
-    last_bin_start to np.inf.
+    Creates an array of bin edges starting from 0 to np.inf, with last
+    bin spanning fromlast_bin_start to np.inf.
 
     Args:
-        bin_width (int | float): width of bins for all bins except last bin (last bin
-            will be wider).
+        bin_width (int | float): width of bins for all bins except last
+            bin; last bin will be wider.
         last_bin_start (int | float): lower edge of last bin
 
     Returns:
@@ -132,11 +132,11 @@ def _make_diameter_class_bins(
 
 
 def _has_tree_data(fvs_data: dict[str, pd.DataFrame]) -> bool:
-    """Checks whether a dictionary of FVS output dataframes has treelists in it.
+    """Checks whether dict of FVS output dataframes has treelists in it.
 
     Args:
-      fvs_data (dict[str, pd.DataFrame]): dictionary of dataframes scraped from FVS
-        output database.
+      fvs_data (dict[str, pd.DataFrame]): dictionary of dataframes
+        scraped from FVS output database.
 
     Returns:
       bool: True if a treelist output table was found, False otherwise.
@@ -151,17 +151,19 @@ def _has_tree_data(fvs_data: dict[str, pd.DataFrame]) -> bool:
 def _add_all_stocking_and_combine(
     stand_stock: pd.DataFrame, calculation_columns: Sequence[str]
 ) -> pd.DataFrame:
-    """Computes stocking across all diameter classes and appends it to table.
+    """Computes stocking for all diameter classes and appends to table.
 
     Args:
-      stand_stock (pd.DataFrame): dataframe of stand and stock data for each observed
-        diameter class in a treelist created by _make_treelist_stand_stock,
-        _make_cutlist_stand_stock, or _make_residual_stand_stock.
-      calculation_columns (Sequence[str]): names of columns in the stand stock table for
-        which sums will be calculated.
+      stand_stock (pd.DataFrame): dataframe of stand and stock data for
+        each observed diameter class in a treelist created by
+        _make_treelist_stand_stock, _make_cutlist_stand_stock, or
+        _make_residual_stand_stock.
+      calculation_columns (Sequence[str]): names of columns in the
+        stand stock table for which sums will be calculated.
 
     Returns:
-      stand stock table with row added with total stocking across all diameter classes.
+      stand stock table with row added with total stocking for all
+      diameter classes.
     """
     all_dbh_classes = (
         stand_stock.groupby(by=STAND_STOCK_GROUPING_COLUMNS)[
@@ -193,7 +195,7 @@ def _make_treelist_stand_stock(
         bins (Sequence[int | float]): diameter class bins
 
     Returns:
-        Pandas DataFrame of FVS Stand Stock table for the treelist columns.
+        Pandas DataFrame of FVS Stand Stock table for treelist columns.
     """
     stand_stock = tree_df.copy()
 
@@ -262,7 +264,7 @@ def _make_cutlist_stand_stock(
         bins (Sequence[int | float]): diameter class bins
 
     Returns:
-        Pandas DataFrame of FVS Stand Stock table for the cutlist columns.
+        Pandas DataFrame of FVS Stand Stock table for cutlist columns.
     """
     stand_stock = tree_df.copy()
 
@@ -312,7 +314,7 @@ def _make_residual_stand_stock(
         bins (Sequence[int | float]): diameter class bins
 
     Returns:
-        Pandas DataFrame of FVS Stand Stock table for the residual tree columns.
+        Pandas DataFrame of FVS Stand Stock table for residual columns.
     """
     stand_stock = tree_df.copy()
 
@@ -357,29 +359,33 @@ def make_stand_stock_table(
 ) -> pd.DataFrame:
     """Makes the FVS Stand Stock Table by summarizing Treelist Tables.
 
-    FVS Stand Stock Table contains trees per acre, basal area (sq ft/ac), total cubic
-    foot volume (cuft/ac), merchantable cubic foot volume (cuft/ac), and boardfoot
-    volume (bdft/ac) by diameter class and species, for before-thinning live trees,
-    harvested trees, mortality trees during the cycle, and residual after-thinning live
-    trees.
+    FVS Stand Stock Table contains trees per acre, basal area (sqft/ac),
+    total cubic foot volume (cuft/ac), merchantable cubic foot volume
+    (cuft/ac), and boardfoot volume (bdft/ac) by diameter class and
+    species, for before-thinning live trees, harvested trees, mortality
+    trees during the cycle, and residual after-thinning live trees.
 
-    For estimates to be generated for live and mortality trees, the underlying FVS
-    database must have a FVS_Treelist table. Similarly, to calculate values for
-    harvested trees, the output database must include a FVS_Cutlist table. And for
-    residual after-thinning trees, the output database must include a FVS_ATRTList
-    table. If none of these tables are found, a warning will be raised and the StdStk
-    table created will be empty. If any one of the these underlying tables are found in
-    the FVS output database, the StdStk table will be populated, and any columns which
-    cannot be calculated due to the absence of an underlying tree list in the FVS output
-    database will be left as nulls. For example, if FVS_Treelist is found, but
-    FVS_Cutlist is not, columns for harvested tree values in StdStk will be null.
+    For estimates to be generated for live and mortality trees, the
+    underlying FVS database must have a FVS_Treelist table. Similarly,
+    to calculate values for harvested trees, the output database must
+    include a FVS_Cutlist table. And for residual after-thinning trees,
+    the output database must include a FVS_ATRTList table. If none of
+    these tables are found, a warning will be raised and the StdStk
+    table created will be empty. If any one of the these underlying
+    tables are found in the FVS output database, the StdStk table will
+    be populated, and any columns which cannot be calculated due to the
+    absence of an underlying tree list in the FVS output database will
+    be left as nulls. For example, if FVS_Treelist is found, but
+    FVS_Cutlist is not, columns for harvested tree values in StdStk will
+    be null.
 
     Args:
-        fvs_data (dict[str, pd.DataFrame]): dictionary of Pandas dataframes, expected to
-            include one of: "fvs_treelist", "fvs_cutlist", or "fvs_atrtlist"
+        fvs_data (dict[str, pd.DataFrame]): dictionary of Pandas
+            dataframes, expected to include one of: "fvs_treelist",
+            "fvs_cutlist", or "fvs_atrtlist"
         dbh_class (int): The width of each DBH class (in inches) used.
-        large_dbh (int): The largest DBH beyond which all DBH classes will be lumped
-                together.
+        large_dbh (int): The largest DBH beyond which all DBH classes
+            will be lumped together.
 
     Returns:
         Pandas DataFrame of FVS Stand Stock table

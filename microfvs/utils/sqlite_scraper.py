@@ -36,22 +36,24 @@ def get_sqlite_engine(path_to_db: str | os.PathLike) -> Engine:
 
 
 class SqliteScraper:
-    """A class for scraping SQLite databases into a dictionary of Pandas DataFrames."""
+    """Scraper for SQLite databases into a dictionary of DataFrames."""
 
     @staticmethod
     def _scrape_engine(
         engine: Engine, dtype: DtypeArg | None = None
     ) -> dict[str, pd.DataFrame]:
-        """Scrapes a SQLite database into a dictionary of Pandas DataFrames.
+        """Scrapes a SQLite database into a dict of Pandas DataFrames.
 
         Args:
-            engine (Engine): SQLAlchemy engine that can be used to connect to the DB.
-            dtype (DtypeArg, optional): Type name or dict of columns. Data type for
-                data or columns. E.g. np.float64 or {'a': np.float64, 'b': 'Int64'}.
-                Passed directly to `pd.read_sql`.
+            engine (Engine): SQLAlchemy engine that can be used to
+                connect to the DB.
+            dtype (DtypeArg, optional): Type name or dict of columns.
+                Data type for data or columns. E.g. np.float64 or {'a':
+                np.float64, 'b': 'Int64'}. Passed directly to
+                `pd.read_sql`.
 
         Returns:
-            dictionary with table names as keys and Pandas DataFrames as values.
+            dict with table names as keys and DataFrames as values.
         """
         tables = pd.read_sql(
             "SELECT name FROM sqlite_master WHERE type='table'", engine
@@ -71,26 +73,26 @@ class SqliteScraper:
     def scrape(
         cls, path_to_db: str | os.PathLike, dtype: DtypeArg | None = None
     ) -> dict[str, pd.DataFrame]:
-        """Scrapes a SQLite database into a dictionary of Pandas DataFrames.
+        """Scrapes a SQLite database into a dict of DataFrames.
 
         Args:
             path_to_db (str | os.PathLike): path to the SQLite database.
-            dtype (DtypeArg, optional): Type name or dict of columns. Data type for
-                data or columns. E.g. np.float64 or {'a': np.float64, 'b': 'Int64'}.
-                Passed to `pd.read_sql`.
+            dtype (DtypeArg, optional): Type name or dict of columns.
+                Data type fordata or columns. E.g. np.float64 or {'a':
+                np.float64, 'b': 'Int64'}. Passed to `pd.read_sql`.
 
 
         Returns:
-            dictionary with table names as keys and Pandas DataFrames as values.
+            dict with table names as keys and DataFrames as values.
         """
         return cls._scrape_engine(get_sqlite_engine(path_to_db), dtype=dtype)
 
 
 class FvsSqliteScraper(SqliteScraper):
-    """Extension of SqliteScraper to add StdStk and other FVS-specific tables.
+    """Extension of SqliteScraper to add StdStk and FVS-specific tables.
 
-    The extension to SqliteScraper is primarily intended to extend the scrape method to
-    add the generation of the FVS_StdStk table.
+    The extension to SqliteScraper is primarily intended to extend the
+    scrape method to add the generation of the FVS_StdStk table.
     """
 
     @classmethod
@@ -102,23 +104,26 @@ class FvsSqliteScraper(SqliteScraper):
         dbh_class: int = 4,
         large_dbh: int = 48,
     ) -> dict[str, pd.DataFrame]:
-        """Scrapes a FVS SQLite database into a dictionary of Pandas DataFrames.
+        """Scrapes a FVS SQLite database into a dict of DataFrames.
 
         Args:
             path_to_db (str | os.PathLike): path to the SQLite database.
-            dtype (DtypeArg, optional): Type name or dict of columns. Data type for
-                data or columns. E.g. np.float64 or {'a': np.float64, 'b': 'Int64'}.
-                Passed to `pd.read_sql` when scraping tables from the database.
-            add_stand_stock (bool, optional): Whether to generate the FVS_StdStk table.
-            dbh_class (int, optional): The width of each DBH class (in inches) used in
-                the StdStk table. Ignored if `add_stand_stock` is False.
-            large_dbh (int, optional): The largest DBH beyond which all DBH classes will
-                be lumped together in the StdStk table. Ignored if `add_stand_stock` is
-                False.
+            dtype (DtypeArg, optional): Type name or dict of columns.
+                Data type for data or columns. E.g. np.float64 or {'a':
+                np.float64, 'b': 'Int64'}. Passed to `pd.read_sql` when
+                scraping tables from the database.
+            add_stand_stock (bool, optional): Whether to generate the
+                FVS_StdStk table.
+            dbh_class (int, optional): The width of each DBH class (in
+                inches) used in the StdStk table. Ignored if
+                `add_stand_stock` is False.
+            large_dbh (int, optional): The largest DBH beyond which all
+                DBH classes will be lumped together in the StdStk table.
+                Ignored if `add_stand_stock` is False.
 
         Returns:
-            scraped_fvs_data (dict[FvsOutputTableName: pd.DataFrame]): Dictionary with
-                table names as keys and Pandas DataFrames as values.
+            scraped_fvs_data (dict[FvsOutputTableName: pd.DataFrame]):
+            Dict with table names as keys and DataFrames as values.
         """
         scraped_fvs_data = super().scrape(path_to_db, dtype=dtype)
 
@@ -130,9 +135,10 @@ class FvsSqliteScraper(SqliteScraper):
                     )
                 )
             for w in recorded_warnings:
-                # want to add path_to_db to warning issued by make_stand_stock_table,
-                # which doesn't anything about the original database, just the
-                # dataframes scraped from it. Catch that warning and update message.
+                # want to add path_to_db to warning from
+                # make_stand_stock_table, which doesn't mention the
+                # original database, just the dataframes scraped from
+                # it. Catch that warning and update message.
                 if isinstance(w, FvsStandStockWarning):
                     w.message = (
                         "No tree list tables found in FVS output database at"

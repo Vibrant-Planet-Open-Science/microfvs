@@ -34,7 +34,7 @@ def check_fvs_version() -> dict[str, str]:
 
 @app.get("/template", response_class=PlainTextResponse)
 def example_keyfile_template() -> str:
-    """Return default keyfile templates for simulating a single stand in FVS."""
+    """Return default template for simulating a single stand in FVS."""
     return FvsKeyfileTemplate.DEFAULT
 
 
@@ -70,9 +70,9 @@ def generate_keyfile_from_template(
 
     Args:
         template (str): str containing jinja2 FVS Keyfile template
-        params (FvsKeyfileTemplateParams, optional): parameters to inject into
-            the keyfile template, parameter values will be injected to parameter
-            names found in the template.
+        params (FvsKeyfileTemplateParams, optional): parameters to
+            inject into the keyfile template, parameter values will be
+            injected to parameter names found in the template.
     """
     return FvsKeyfile(
         template=template,
@@ -102,19 +102,22 @@ def run_fvs_batch(
     """Runs FVS and returns the results.
 
     Args:
-        stand_init (FvsStandInit): Stand initialization data for one or more
-            stands. All stands represented in stand_init will be run in the
-            order specified unless or until `limit` is reached.
-        tree_init (FvsTreeInit, optional): Tree initialization data for one or
-            more stands. If not provided, bare ground will be simulated.
-        limit (int, optional): batch size to which the number of simulations
-            will be capped.
-        treatments (list[FvsEvent], dict[str, list[FvsEvent]], optional):
-            Treatments to be simulated. If specified as a list of FvsEvents, the
-            same set of events will be applied to all stands. Can be specified
-            as a dict with keys referring to stand_ids and dict values
-            corresponding to a list of treatments to apply for that stand. By
-            default, no treatments will be simulated for any stand.
+        stand_init (FvsStandInit): Stand initialization data for one or
+            more stands. All stands represented in stand_init will be
+            run in the order specified unless or until `limit` is
+            reached.
+        tree_init (FvsTreeInit, optional): Tree initialization data for
+            one or more stands. If not provided, bare ground will be
+            simulated.
+        limit (int, optional): batch size to which the number of
+            simulations will be capped.
+        treatments (list[FvsEvent], dict[str, list[FvsEvent]], optional):  # noqa: W505
+            Treatments to be simulated. If specified as a list of
+            FvsEvents, the same set of events will be applied to all
+            stands. Can be specified as a dict with keys referring to
+            stand_ids and dict values corresponding to a list of
+            treatments to apply for that stand. By default, no
+            treatments will be simulated for any stand.
         disturbances (list[FvsEvent], dict[str, list[FvsEvent]], optional):
             Disturbances to be simulated. If specified as a list of FvsEvents,
             the same set of events will be applied to all stands. Can be
@@ -130,7 +133,7 @@ def run_fvs_batch(
             outputs. Default is to produce the Stand and Stock Table, and
             to do so using DBH classes of 4 inches and a large diameter
             category starting at 48 inches DBH.
-    """
+    """  # noqa: W505
     return run_fvs(
         stand_init=stand_init,
         tree_init=tree_init,
@@ -161,27 +164,31 @@ def get_outfile(
 ) -> str:
     """Runs FVS and returns the OUT file.
 
-    If multiple stands are included in `stand_init`, only the outfile from the
-    first stand is returned.
+    If multiple stands are included in `stand_init`, only the outfile
+    from thefirst stand is returned.
 
     Args:
-        stand_init (FvsStandInit): Stand initialization data for one or more
-            stands. All stands represented in stand_init will be run in the
-            order specified unless or until `limit` is reached.
-        tree_init (FvsTreeInit, optional): Tree initialization data for one or
-            more stands. If not provided, bare ground will be simulated.
-        treatments (list[FvsEvent], dict[str, list[FvsEvent]], optional):
-            Treatments to be simulated. If specified as a list of FvsEvents, the
-            same set of events will be applied to all stands. Can be specified
-            as a dict with keys referring to stand_ids and dict values
-            corresponding to a list of treatments to apply for that stand. By
-            default, no treatments will be simulated for any stand.
-        disturbances (list[FvsEvent], dict[str, list[FvsEvent]], optional):
-            Disturbances to be simulated. If specified as a list of FvsEvents,
-            the same set of events will be applied to all stands. Can be
-            specified as a dict with keys referring to stand_ids and dict values
-            corresponding to a list of disturbances to apply for that stand. By
-            default, no disturbance will be simulated for any stand.
+        stand_init (FvsStandInit): Stand initialization data for one or
+            more stands. All stands represented in stand_init will be
+            run in the order specified unless or until `limit` is
+            reached.
+        tree_init (FvsTreeInit, optional): Tree initialization data for
+            one or more stands. If not provided, bare ground will be
+            simulated.
+        treatments (list[FvsEvent], dict[str, list[FvsEvent]], optional):  # noqa: W505
+            Treatments to be simulated. If specified as a list of
+            FvsEvents, the same set of events will be applied to all
+            stands. Can be specified as a dict with keys referring to
+            stand_ids and dict values corresponding to a list of
+            treatments to apply for that stand. By default, no
+            treatments will be simulated for any stand.
+        disturbances (list[FvsEvent], dict[str, list[FvsEvent]], optional):  # noqa: W505
+            Disturbances to be simulated. If specified as a list of
+            FvsEvents, the same set of events will be applied to all
+            stands. Can be specified as a dict with keys referring to
+            stand_ids and dict values corresponding to a list of
+            disturbances to apply for that stand. By default, no
+            disturbance will be simulated for any stand.
         template (str, optional): FVS keyfile template to use. Defaults to
             FvsKeyfileTemplate.DEFAULT
         template_params (dict, optional):
@@ -191,7 +198,7 @@ def get_outfile(
             outputs. Default is to produce the Stand and Stock Table, and
             to do so using DBH classes of 4 inches and a large diameter
             category starting at 48 inches DBH.
-    """
+    """  # noqa: W505
     result = run_fvs(
         stand_init=stand_init,
         tree_init=tree_init,
@@ -223,7 +230,7 @@ def get_treatment_kcp(treatment_code: str) -> str:
     """Gets the content of a FVS FvsEvent KCP file.
 
     Args:
-        treatment_code (str): code for a treatment recognized by MicroFVS
+        treatment_code (str): code for treatment recognized by MicroFVS
     """
     library = FvsEventLibrary()
     if treatment_code not in library.treatments:

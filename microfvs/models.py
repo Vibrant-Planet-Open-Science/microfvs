@@ -61,7 +61,7 @@ class FvsEvent(BaseModel):
 
 
 class FvsEventLibrary:
-    """A class for looking up up FVS Events (treatments and disturbances)."""
+    """A class for looking up FVS Events (treatments, disturbances)."""
 
     @cached_property
     def treatments(self) -> dict[str, FvsEvent]:
@@ -106,9 +106,8 @@ class FvsEventLibrary:
         """Look up an event from the library.
 
         Args:
-            event_type (FvsEventType): type of event to look up (disturbance or
-                treatment)
-            event_key (str | FvsEvent): the name of the event to look up.
+            event_type (FvsEventType): type of event to look up
+            event_key (str | FvsEvent): the name of the event to look up
         """
         if event_type == FvsEventType.TREATMENT.value:
             if event_key not in self.treatments:
@@ -127,7 +126,7 @@ class FvsEventLibrary:
 
 
 class FvsKeyfileTemplateParams(BaseModel):
-    """Parameters injected into FVS Keyfile template for a single simulation."""
+    """Parameters injected into Keyfile template for a simulation."""
 
     variant: FvsVariant
     stand_id: str
@@ -157,10 +156,10 @@ class FvsKeyfileTemplateParams(BaseModel):
 
     @property
     def expected_fields(self) -> dict:
-        """Fields expected (but not required) to be defined and their values.
+        """Fields expected (not required) to exist and their values.
 
-        These are injected into a keyfile in an initial step before extra fields
-        are injected.
+        These are injected into a keyfile in an initial step before
+        extra fields are injected.
         """
         return {
             key: value
@@ -170,10 +169,10 @@ class FvsKeyfileTemplateParams(BaseModel):
 
     @property
     def extra_fields(self) -> dict:
-        """Fields expected (but not required) to be defined and their values.
+        """Extra fields to be defined and their values.
 
-        These are injected into a keyfile in an initial step before extra fields
-        are injected.
+        These are injected into a keyfile after expected fields are
+        injected.
         """
         return self.model_extra
 
@@ -223,7 +222,7 @@ class FvsKeyfileTemplateParams(BaseModel):
 
 
 class FvsStandStockParams(BaseModel):
-    """Parameters for calculating Stand and Stock Tables when scraping FVS results."""
+    """Params for Stand and Stock Tables when scraping FVS results."""
 
     add_stand_stock: bool = True
     dbh_class: int = 4
@@ -231,13 +230,13 @@ class FvsStandStockParams(BaseModel):
 
 
 class FvsKeyfile(BaseModel):
-    """A model for documenting a keyfile for running FVS on a single stand.
+    """A model documenting a keyfile for running FVS on a single stand.
 
     Args:
-        template (str): Optional Jinja template for the FVS Keyfile, defaults to
-            FvsKeyfileTemplate.DEFAULT
-        params (FvsKeyfileTemplateParams): Parameters to be injected into the
-            keyfile template.
+        template (str): Optional Jinja template for the FVS Keyfile,
+            defaults to FvsKeyfileTemplate.DEFAULT
+        params (FvsKeyfileTemplateParams): Parameters to be injected
+            into the keyfile template.
 
     Computed Attributes:
         name (str): concatenation of
@@ -286,10 +285,11 @@ class FvsKeyfile(BaseModel):
     def content(self) -> str:
         """Content of the FVS Keyfile.
 
-        The template is rendered in two distinct steps. First, expected fields
-        are injected into the template. Second, any extra fields are injected.
-        This allows the content of expected fields to include placeholders that
-        are filled when the extra fields are injected.
+        The template is rendered in two distinct steps. First, expected
+        fields are injected into the template. Second, any extra fields
+        are injected.This allows the content of expected fields to
+        include placeholders that are filled when the extra fields are
+        injected.
         """
         rendered = Template(self.template).render(**self.params.expected_fields)
 
@@ -302,8 +302,8 @@ class FvsKeyfile(BaseModel):
 class FvsTreeInitRecord(BaseModel):
     """A model of an individual tree record used as input to FVS.
 
-    Defined based on the fields to be formatted according to the TREEFMT FVS keyword,
-    as defined in the FVS Keyword Guide:
+    Defined based on the fields to be formatted according to the TREEFMT
+    FVS keyword, as defined in the FVS Keyword Guide:
     https://www.fs.usda.gov/fmsc/ftp/fvs/docs/gtr/keyword.pdf
 
     """
@@ -373,7 +373,7 @@ class FvsTreeInit(BaseModel):
 
     @staticmethod
     def from_records(records: list[dict] | None) -> FvsTreeInit:
-        """Creates FvsTreeInit from a list of tree records as dictionaries.
+        """Creates FvsTreeInit from a list of tree records as dicts.
 
         Args:
             records (list[dict] | None): tree records to incorporate.
@@ -391,12 +391,12 @@ class FvsTreeInit(BaseModel):
         """Creates a list of FvsTreeInitRecords from a Pandas DataFrame.
 
         Args:
-            df (pd.DataFrame): a DataFrame with tree initialization data.
-            stand_id (str | int): the identifier used to find trees that have
-                this value in the column specified in `column_name`.
-            column_name (str): the name of the column to use for finding the
-                stand you want, usually "stand_id". Another common option for
-                folks using FIA data might be "stand_cn".
+            df (pd.DataFrame): a DataFrame with tree initialization data
+            stand_id (str | int): the identifier used to find trees that
+                have this value in the column specified in `column_name`
+            column_name (str): the name of the column to use for finding
+                the stand you want, usually "stand_id". Another common
+                option for folks using FIA data might be "stand_cn"
         """
         tree_df = df.copy()
         tree_df.columns = [col.lower() for col in tree_df.columns]
@@ -513,20 +513,20 @@ class FvsStandInit(BaseModel):
         """Creates FvsStandInit from a single row in a pandas DataFrame.
 
         Args:
-            df (pd.DataFrame): A Pandas DataFrame with stand initialization
-                data.
-            stand_id (int | str): The identifier for the stand to single out
-                a record by filtering `column_to_match`.
-            column_name (str): the name of the column to use for finding the
-                stand you want, usually "stand_id". Another common option for
-                folks using FIA data might be "stand_cn".
+            df (pd.DataFrame): A Pandas DataFrame with stand
+                initialization data.
+            stand_id (int | str): The identifier for the stand to single
+                out a record by filtering `column_to_match`.
+            column_name (str): the name of the column to use for finding
+                the stand you want, usually "stand_id". Another common
+                option for folks using FIA data might be "stand_cn".
 
         Returns:
             FvsStandInit
 
         Raises:
-            ValidationError: if the record in the DataFrame does not have all
-                necessary fields to create an FvsStandInit.
+            ValidationError: if the record in the DataFrame does not
+                have all necessary fields to create an FvsStandInit.
             ValueError: if more or less than a single row is found in
                 `column_name` with the value specified in `stand_id`.
         """
@@ -545,7 +545,7 @@ class FvsStandInit(BaseModel):
 
 
 class FvsOutputTreeListRecord(BaseModel):
-    """A model for a tree record in a TreeList output table generated by FVS."""
+    """A model for a record in a TreeList table generated by FVS."""
 
     caseid: str
     standid: str | int
@@ -567,8 +567,10 @@ class FvsOutputTreeListRecord(BaseModel):
         """Returns a randomly generated TreeList Record.
 
         Args:
-            smallest_tree (bool): if True, returns a tree with diameter 0.1 inches
-            largest_tree (bool): if True, returns a tree with maximum diameter
+            smallest_tree (bool): if True, returns a tree with diameter
+                0.1 inches
+            largest_tree (bool): if True, returns a tree with maximum
+                diameter
         """
         if smallest_tree and largest_tree:
             message = "Only one of smallest_tree and largest_tree can be True."
@@ -623,8 +625,8 @@ class FvsOutputTreeListRecord(BaseModel):
             num_trees (int): number of trees to generate
 
         Returns:
-            a list of TreeListRecords as dictionaries, which can be read directly into
-            a dataframe using pd.DataFrame.from_records(...)
+            a list of TreeListRecords as dictionaries, which can be read
+            directly into a dataframe using pd.DataFrame.from_records()
         """
         if num_trees < 2:
             message = (
@@ -641,7 +643,7 @@ class FvsOutputTreeListRecord(BaseModel):
 
 
 class FvsResult(BaseModel):
-    """A class for results from executing FVS via Command Line Interface.
+    """A class for results from running FVS via Command Line Interface.
 
     Public Attributes:
         name (str): name of the FVS run
@@ -649,15 +651,24 @@ class FvsResult(BaseModel):
         stand_id (str): identifier for the stand being simulated
         treatment (str): name of a FVS treatment recipe
         disturbance (str): name of a FVS disturbance recipe
-        keyfile (str): content of an FVS Keyfile used to run the simulation
-        command (str): command that was used to execute the FVS simulation using the CLI
-        return_code (int): return code from the execution of FVS using the CLI
-        stdout(str | None): stdout returned from the execution of FVS using the CLI
-        stderr (str | None): stderr returned from the execution of FVS using the CLI
-        outfile (str): contents of the FVS outfile generated from the simulation
-        fvs_errors (list[dict] | None): errors scraped from the FVS outfile
-        fvs_warnings (list[dict] | None): warnings scraped from the FVS outfile
-        fvs_data (dict[FvsOutputTableName, list[dict]]): data scraped from the FVS output database
+        keyfile (str): content of an FVS Keyfile used to run the
+            simulation
+        command (str): command that was used to execute the FVS
+            simulation using the CLI
+        return_code (int): return code from the execution of FVS using
+            the CLI
+        stdout(str | None): stdout returned from the execution of FVS
+            using the CLI
+        stderr (str | None): stderr returned from the execution of FVS
+            using the CLI
+        outfile (str): contents of the FVS outfile generated from the
+            simulation
+        fvs_errors (list[dict] | None): errors scraped from the FVS
+            outfile
+        fvs_warnings (list[dict] | None): warnings scraped from the FVS
+            outfile
+        fvs_data (dict[FvsOutputTableName, list[dict]]): data scraped
+            from the FVS output database
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True, frozen=True)
@@ -744,15 +755,19 @@ class FvsResult(BaseModel):
 
         Args:
             fvs_keyfile (FvsKeyfile): an FvsKeyfile instance
-            process (subprocess.CompletedProcess): result from FVS Command Line call
-            path_to_dbout (str | os.PathLike): path to FVS output SQLite database
+            process (subprocess.CompletedProcess): result from FVS
+                Command Line call
+            path_to_dbout (str | os.PathLike): path to FVS output SQLite
+                database
             path_to_outfile  (str | os.PathLike): path to *.out file
-            add_stand_stock (bool, optional): Whether to generate the FVS_StdStk table.
-            dbh_class (int, optional): The width of each DBH class (in inches) used in
-                the StdStk table. Ignored if `add_stand_stock` is False.
-            large_dbh (int, optional): The largest DBH beyond which all DBH classes will
-                be lumped together in the StdStk table. Ignored if `add_stand_stock` is
-                False.
+            add_stand_stock (bool, optional): Whether to generate the
+                FVS_StdStk table
+            dbh_class (int, optional): The width of each DBH class (in
+                inches) used in the StdStk table. Ignored if
+                `add_stand_stock` is False.
+            large_dbh (int, optional): The largest DBH beyond which all
+                DBH classes will be lumped together in the StdStk table.
+                Ignored if `add_stand_stock` is False.
         """
         result_attributes = {
             "name": fvs_keyfile.name,
@@ -778,14 +793,15 @@ class FvsResult(BaseModel):
     def _parse_fvs_process_attributes(
         process: subprocess.CompletedProcess,
     ) -> dict[str, str | int | None]:
-        """Extract attributes of a CompletedProcess from FVS CLI execution.
+        """Extract attributes of CompletedProcess of FVS CLI run.
 
         Args:
-            process (subprocess.CompletedProcess): the result of subprocess.run()
+            process (subprocess.CompletedProcess): the result of
+                subprocess.run()
 
         Returns:
-            dictionary of parsed attributes by name, including return_rode, command,
-            stderr, and stdout.
+            dictionary of parsed attributes by name, including
+            return_code, command, stderr, and stdout.
         """
         return {
             "command": " ".join(process.args),
@@ -810,7 +826,8 @@ class FvsResult(BaseModel):
         outfile (str): content of an FVS output file
 
         Returns:
-        problems (list[FvsOutfileProblem] | None): list of any problems parsed from outfile
+            problems (list[FvsOutfileProblem] | None): list of any
+            problems parsed from outfile
         """
         problems = []
 
@@ -863,7 +880,7 @@ class FvsResult(BaseModel):
 
 
 class FvsOutfileProblem(BaseModel):
-    """A class for packaging errors and warnings identified in FVS output files."""
+    """Packages errors and warnings identified in FVS output files."""
 
     line_number: int
     type: str

@@ -54,8 +54,9 @@ def test_treelist_stand_stock():
     assert list(stand_stock.columns) == TREELIST_CALCULATION_COLUMNS
     assert list(stand_stock.index.names) == STAND_STOCK_INDEX_COLUMNS
 
-    # check that livetpa in smallest diameter class in stand_stock is same as what we
-    # get directly from input treelist for all species and years
+    # check that livetpa in smallest diameter class in stand_stock is
+    # same as what we get directly from input treelist for all species
+    # and years
     for (year, fiaspp), group_trees in df.groupby(
         [YEAR_COLUMN_NAME, SPECIES_FIA_COLUMN_NAME]
     ):
@@ -85,8 +86,9 @@ def test_cutlist_stand_stock():
     assert list(stand_stock.columns) == CUTLIST_CALCULATION_COLUMNS
     assert list(stand_stock.index.names) == STAND_STOCK_INDEX_COLUMNS
 
-    # check that harvested tpa in smallest diameter class in stand_stock is same as what
-    # we get directly from input cutlist for all species and years
+    # check that harvested tpa in smallest diameter class in stand_stock
+    # is same as what we get directly from input cutlist for all species
+    # and years
     for (year, fiaspp), group_trees in df.groupby(
         [YEAR_COLUMN_NAME, SPECIES_FIA_COLUMN_NAME]
     ):
@@ -116,8 +118,9 @@ def test_residual_stand_stock():
     assert list(stand_stock.columns) == RESIDUAL_CALCULATION_COLUMNS
     assert list(stand_stock.index.names) == STAND_STOCK_INDEX_COLUMNS
 
-    # check that residual tpa in smallest diameter class in stand_stock is same as what
-    # we get directly from input residual treelist for all species and years
+    # check that residual tpa in smallest diameter class in stand_stock
+    # is same as what we get directly from input residual treelist for
+    # all species and years
     for (year, fiaspp), group_trees in df.groupby(
         [YEAR_COLUMN_NAME, SPECIES_FIA_COLUMN_NAME]
     ):
@@ -254,8 +257,8 @@ def test_diameter_class_bin_maker(diameter_class, large_diameter):
     assert len(bins) == large_diameter // diameter_class + 2
 
 
-# this implicitly tests the _add_all_and_combine helper by focusing on the only row that
-# it adds to a stand_stock table
+# this implicitly tests the _add_all_and_combine helper by focusing on
+# the only row that it adds to a stand_stock table
 def test_add_all_diameter_totals():
     df = pd.DataFrame.from_records(random_treelist)
     bins = _make_diameter_class_bins(
@@ -267,8 +270,9 @@ def test_add_all_diameter_totals():
         in stand_stock.index.get_level_values(DIAMETER_CLASS_COLUMN_NAME)
     )
 
-    # check that livetpa in "All" diameter class in stand_stock is same as what we
-    # get directly from input treelist for all species and years
+    # check that livetpa in "All" diameter class in stand_stock is same
+    # as what we get directly from input treelist for all species and
+    # years
     for (year, fiaspp), group_trees in df.groupby(
         [YEAR_COLUMN_NAME, SPECIES_FIA_COLUMN_NAME]
     ):
