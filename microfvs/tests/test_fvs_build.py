@@ -13,9 +13,9 @@ from microfvs.enums import FvsVariant
 @pytest.mark.parametrize("variant", FvsVariant)
 def test_fvs_build(variant: FvsVariant, tmp_path: Path):
     """
-    Test to confirm each FVS regional variant has been built successfully.
+    Test to confirm each FVS regional variant was built successfully.
 
-    Creates a keyfile in a temporary directory and runs it, confirming that:
+    Creates a keyfile in a temporary directory and runs it, confirming:
         1. The FVS executable exists
         2. The keyfile for testing the FVS variant exists.
         3. The execution of FVS generated an *.out file
@@ -26,9 +26,10 @@ def test_fvs_build(variant: FvsVariant, tmp_path: Path):
     Removes the FVS *.out file as well.
 
     Args:
-      variant (FvsVariant): an FVS variant code that is a member of the FvsVariant enum
-      tmp_path (Generator[Path]): a Pytest automatically-inserted "fixture", generates a
-        temporary path
+      variant (FvsVariant): an FVS variant code that is a member of the
+        FvsVariant enum
+      tmp_path (Generator[Path]): a Pytest automatically-inserted
+        "fixture", generates a temporary path
     """
     fvs = f"/usr/local/bin/FVS{variant.lower()}"
 
@@ -42,7 +43,7 @@ def test_fvs_build(variant: FvsVariant, tmp_path: Path):
     with open(keyfile, "w") as f:
         f.write(keyfile_content)
     outfile = f"{tmp_path}/{variant}_buildtest.out"
-    proc = subprocess.run([fvs, f"--keywordfile={keyfile}"])
+    proc = subprocess.run([fvs, f"--keywordfile={keyfile}"], cwd=tmp_path)
 
     assert os.path.exists(keyfile)
     assert os.path.exists(outfile)
