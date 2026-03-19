@@ -10,8 +10,63 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Install pytest and dependencies
-        run: pip install pytest pytest-mock -r requirements.txt
+
+      - name: Cache pip wheels
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements*.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt -r requirements-dev.txt
 
       - name: Run tests inside container
         run: pytest .
+
+  nbval:
+    runs-on: ubuntu-latest
+    container:
+      image: daviddanieldiaz/fvs:FS2025.4c
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Cache pip wheels
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements*.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt -r requirements-dev.txt
+          pip install -e .
+
+      - name: Run nbval-lax on changed notebooks
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+
+          mapfile -d '' -t notebooks < <(
+            git diff -z --name-only --diff-filter=AM "${BASE_SHA}...${HEAD_SHA}" -- '*.ipynb'
+          )
+
+          if [ "${#notebooks[@]}" -eq 0 ]; then
+            echo "No notebooks changed in this PR; skipping nbval."
+            exit 0
+          fi
+
+          printf 'Changed notebooks:\n'
+          printf -- ' - %s\n' "${notebooks[@]}"
+
+          python -m pytest --nbval-lax "${notebooks[@]}"
