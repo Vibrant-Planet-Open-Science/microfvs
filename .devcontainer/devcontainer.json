@@ -5,22 +5,15 @@
         "context": ".."
     },
     "remoteEnv": {
-        "PYTHONPATH": "/code/microfvs"
-    },
-    "containerEnv": {
-        "PYTHONPATH": "/code/microfvs"
+        "PYTHONPATH": "${containerWorkspaceFolder}"
     },
     "features": {
         "ghcr.io/devcontainers/features/common-utils": {
+            "installNano": true,
             "installZsh": true,
-            "installOhMyZsh": true,
-            "installOhMyZshConfig": true,
             "configureZshAsDefaultShell": true
         },
-        "ghcr.io/prulloac/devcontainer-features/pre-commit:latest": {},
-        "ghcr.io/devcontainers-extra/features/apt-packages:1": {
-            "packages": "nano"
-        }
+        "ghcr.io/prulloac/devcontainer-features/pre-commit:latest": {}
     },
     "customizations": {
         "vscode": {
@@ -30,51 +23,27 @@
                 "github.vscode-pull-request-github",
                 "johnpapa.vscode-peacock",
                 "ms-azuretools.vscode-docker",
-                "ms-python.black-formatter",
-                "ms-python.isort",
                 "ms-python.mypy-type-checker",
                 "ms-python.python",
-                "ms-toolsai.jupyter-keymap",
-                "ms-toolsai.jupyter-renderers",
                 "ms-toolsai.jupyter",
                 "vscode-icons-team.vscode-icons"
             ],
             "settings": {
-                "mypy-type-checker.args": [
-                    "--config-file",
-                    "mypy.ini"
-                ],
                 "notebook.formatOnSave.enabled": true,
-                "python.defaultInterpreterPath": "/usr/local/bin/python3",
-                "python.analysis.extraPaths": [
-                    "/code/microfvs"
-                ],
-                "python.linting.mypyEnabled": true,
-                "python.linting.enabled": true,
                 "[python]": {
                     "editor.formatOnSave": true,
                     "editor.defaultFormatter": "charliermarsh.ruff",
                     "editor.codeActionsOnSave": {
                         "source.fixAll": "explicit",
                         "source.organizeImports": "explicit"
-                    },
-                    "terminal.integrated.env.linux": {
-                        "PYTHONPATH": "/code/microfvs"
                     }
                 }
             }
         }
     },
-    "runArgs": [
-        "--name",
-        "microfvs-dev"
+    "forwardPorts": [
+        8000
     ],
-    "mounts": [
-        "source=${localEnv:HOME}/.zshrc,target=/home/microfvs-dev/.zshrc,type=bind",
-        "source=${localEnv:HOME}/.oh-my-zsh,target=/home/microfvs-dev/.oh-my-zsh,type=bind"
-    ],
-    "postCreateCommand": "pip install pre-commit ipykernel -r requirements-dev.txt && pre-commit install",
-    "postStartCommand": "git config --global core.trustctime false && git config --global core.checkStat minimal",
-    "workspaceMount": "source=${localEnv:HOME}/projects/microfvs,target=/code/microfvs,type=bind",
-    "workspaceFolder": "/code/microfvs"
+    "postCreateCommand": "pip freeze > /tmp/constraints.txt && pip install -r requirements-dev.txt -c /tmp/constraints.txt && pre-commit install",
+    "postStartCommand": "uvicorn microfvs.main:app --host 0.0.0.0 --port 8000 --reload"
 }
