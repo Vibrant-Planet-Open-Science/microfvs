@@ -23,7 +23,7 @@ Navigate to the root of your local clone of this repository on the command line,
 cd microfvs
 docker build -t microfvs .
 ```
-This may take a while because it is building FVS from source (currently pinned to FVS release `FS2024.4` to ensure reproducible build on that passes basic tests for FVS simulations on Ubuntu OS). Go make a cup of coffee. 
+This may take a while because it is building FVS from source (using a pinned FVS release version to ensure reproducible build on that passes basic tests for FVS simulations on Ubuntu OS). Go make a cup of coffee. 
 
 ### Run the API locally inside the Docker container
 The Docker container running the MicroFVS server should be accessible on port 80, you'll need to forward that to your local machine to be able to communicate with the MicroFVS service. To forward to localhost 8080, for example:
