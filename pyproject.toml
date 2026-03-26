@@ -77,8 +77,3 @@ convention = "google"
 mypy_path = "microfvs"
 files = "microfvs"
 plugins = "sqlalchemy.ext.mypy.plugin"
-
-[tool.pytest.ini_options]
-filterwarnings = [
-    "ignore:(?s).*Pyarrow will become a required dependency of pandas:DeprecationWarning", # pandas pyarrow (pandas<3.0),
-]

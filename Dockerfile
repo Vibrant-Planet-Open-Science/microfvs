@@ -4,9 +4,9 @@ USER root
 
 WORKDIR /build
 ENV FC=gfortran
-ARG FVS_VERSION
 RUN apt-get update &&\
     apt-get install -y git build-essential gfortran cmake unixodbc-dev
+ARG FVS_VERSION=FS2025.4c
 RUN git clone -b "${FVS_VERSION}" --recurse-submodules https://github.com/USDAForestService/ForestVegetationSimulator.git 
 RUN cd /build/ForestVegetationSimulator/bin &&\
     make US
