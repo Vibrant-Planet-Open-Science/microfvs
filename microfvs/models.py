@@ -257,7 +257,8 @@ class FvsKeyfile(BaseModel):
                     f"Template rendering failed: {exc}. "
                     f"Template variables: {sorted(referenced)}. "
                     f"Provided: {sorted(provided_keys)}. "
-                    f"Missing: {not_provided}."
+                    f"Missing (but not necessarily required): "
+                    f"{not_provided}."
                 ),
                 template_variables=sorted(referenced),
                 provided_variables=sorted(provided_keys),

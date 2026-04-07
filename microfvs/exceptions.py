@@ -12,7 +12,8 @@ class FvsTemplateRenderError(Exception):
         provided_variables: Sorted list of variable names that
             were available to the template at render time.
         missing_variables: Sorted list of template variables that
-            were referenced but not provided.
+            were referenced but not provided. Some may have
+            defaults and not be strictly required.
     """
 
     def __init__(
