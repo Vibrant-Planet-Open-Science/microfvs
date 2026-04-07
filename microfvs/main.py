@@ -4,12 +4,11 @@ import importlib.resources
 from typing import Annotated
 
 from fastapi import Body, FastAPI, HTTPException
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse
 
 from microfvs.constants import TEST_STANDINIT_RECORDS, TEST_TREEINIT_RECORDS
 from microfvs.enums import FvsKeyfileTemplate
 from microfvs.models import (
-    FvsEvent,
     FvsEventLibrary,
     FvsEventType,
     FvsKeyfile,
@@ -24,6 +23,20 @@ from microfvs.utils.fvs_version import get_fvs_versions
 from microfvs.utils.run_fvs import run_fvs
 
 app = FastAPI()
+
+
+@app.get("/", response_class=HTMLResponse)
+def read_html() -> str:
+    """Returns a simple HTML page confirming MicroFVS is running."""
+    return """
+    <html>
+        <body>
+            <h1>MicroFVS is running!</h1>
+            <p>This is a simple web service for running FVS simulations.</p>
+            <p>To get started, go to the <a href="/docs">API documentation</a>.</p>
+        </body>
+    </html>
+    """
 
 
 @app.get("/version")
@@ -49,18 +62,10 @@ def generate_keyfile_from_template(
         Body(
             examples=[
                 FvsKeyfileTemplateParams(
-                    variant=FvsVariant.PACIFIC_COAST.value,
+                    variant=FvsVariant.PN.value,
                     stand_id="12345",
                     num_cycles=1,
                     cycle_length=5,
-                    treatments=[
-                        FvsEvent(name="GROW", content="*** NO TREATMENT ***")
-                    ],
-                    disturbances=[
-                        FvsEvent(
-                            name="UNDISTURBED", content="*** NO DISTURBANCE ***"
-                        )
-                    ],
                 )
             ]
         ),
@@ -74,10 +79,7 @@ def generate_keyfile_from_template(
             inject into the keyfile template, parameter values will be
             injected to parameter names found in the template.
     """
-    return FvsKeyfile(
-        template=template,
-        params=params,
-    ).content
+    return FvsKeyfile(template=template, params=params).content
 
 
 @app.post("/run")

@@ -1,15 +1,24 @@
 import importlib.resources
 from enum import StrEnum
 
+from jinja2 import Environment as Jinja2Environment
+from jinja2 import meta as jinja2_meta
+
 
 class FvsKeyfileTemplate(StrEnum):
     """Enumeration of supported Jinja2 Templates for FVS Keyfiles."""
 
     DEFAULT = (
         importlib.resources.files("microfvs.templates")
-        .joinpath("keyfile.j2")
+        .joinpath("default_keyfile.j2")
         .read_text()
     )
+
+    def get_param_names(self) -> list[str]:
+        """Get named parameters that can be injected into template."""
+        env = Jinja2Environment()
+        abstract_syntax_tree = env.parse(self.value)
+        return list(jinja2_meta.find_undeclared_variables(abstract_syntax_tree))
 
 
 class FvsEventType(StrEnum):
@@ -22,30 +31,37 @@ class FvsEventType(StrEnum):
 class FvsVariant(StrEnum):
     """Enumeration of supported FVS Variants."""
 
-    ALASKA = "AK"  # Southeast Alaska and Coastal British Columbia
-    BLUE_MOUNTAINS = "BM"  # Blue Mountains
-    INLAND_CALIFORNIA = "CA"  # Inland California and Southern Cascades (ICASCA)
-    CENTRAL_IDAHO = "CI"  # Central Idaho
-    CENTRAL_ROCKIES = "CR"  # Central Rockies
-    CENTRAL_STATES = "CS"  # Central States
-    EASTERN_CASCADES = "EC"  # East Cascades
-    EASTERN_MONTANA = "EM"  # Eastern Montana
-    INLAND_EMPIRE = "IE"  # Inland Empire
-    KOOTENAI = "KT"  # Kootenai, Kaniksu, and Tally Lake (KooKanTL)
-    LAKE_STATES = "LS"  # Lake States
-    KLAMATH_MOUNTAINS = "NC"  # Klamath Mountains (and northern California)
-    NORTHEAST_US = "NE"  # Northeastern US
-    ORGANON_SOUTHWEST = "OC"  # Organon Southwest
-    ORGANON_PACIFIC = "OP"  # Organon Pacific Northwest
-    PACIFIC_COAST = "PN"  # Pacific Northwest Coast
-    SOUTHERN_US = "SN"  # Southern US
-    SOUTHERN_OREGON = (
-        "SO"  # South Central Oregon and Northeast California (SORNEC)
-    )
-    TETONS = "TT"  # Tetons
-    UTAH = "UT"  # Utah
-    WESTERN_CASCADES = "WC"  # Westside Cascades
-    WESTERN_SIERRAS = "WS"  # Western Sierra Nevada
+    description: str
+
+    AK = ("AK", "Southeast Alaska and Coastal British Columbia")
+    BM = ("BM", "Blue Mountains")
+    CA = ("CA", "Inland California and Southern Cascades (ICASCA)")
+    CI = ("CI", "Central Idaho")
+    CR = ("CR", "Central Rockies")
+    CS = ("CS", "Central States")
+    EC = ("EC", "East Cascades")
+    EM = ("EM", "Eastern Montana")
+    IE = ("IE", "Inland Empire")
+    KT = ("KT", "Kootenai, Kaniksu, and Tally Lake (KooKanTL)")
+    LS = ("LS", "Lake States")
+    NC = ("NC", "Klamath Mountains (and northern California)")
+    NE = ("NE", "Northeastern US")
+    OC = ("OC", "Organon Southwest")
+    OP = ("OP", "Organon Pacific Northwest")
+    PN = ("PN", "Pacific Northwest Coast")
+    SN = ("SN", "Southern US")
+    SO = ("SO", "South Central Oregon and Northeast California (SORNEC)")
+    TT = ("TT", "Tetons")
+    UT = ("UT", "Utah")
+    WC = ("WC", "Westside Cascades")
+    WS = ("WS", "Western Sierra Nevada")
+
+    def __new__(cls, value: str, description: str):
+        """Create a new FvsVariant."""
+        obj = str.__new__(cls, value)
+        obj._value_ = value
+        obj.description = description
+        return obj
 
 
 class FvsOutputTableName(StrEnum):
