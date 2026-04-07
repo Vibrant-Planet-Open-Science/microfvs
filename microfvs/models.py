@@ -241,6 +241,8 @@ class FvsKeyfile(BaseModel):
         treatment = "\n".join(t.content for t in self.treatments)
         disturbance = "\n".join(d.content for d in self.disturbances)
 
+        # first pass
+        # injects fundamental content blocks and template placeholders
         rendered = Template(self.template).render(
             stand_id=self.stand_id,
             treatment=treatment,
@@ -248,6 +250,8 @@ class FvsKeyfile(BaseModel):
             **self.template_params,
         )
 
+        # second pass
+        # resolves placeholders embedded in first pass injections
         if self.template_params:
             rendered = Template(rendered).render(**self.template_params)
 

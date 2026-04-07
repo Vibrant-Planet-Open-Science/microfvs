@@ -9,6 +9,7 @@ from fastapi.responses import HTMLResponse, PlainTextResponse
 from microfvs.constants import TEST_STANDINIT_RECORDS, TEST_TREEINIT_RECORDS
 from microfvs.enums import FvsKeyfileTemplate
 from microfvs.models import (
+    FvsEvent,
     FvsEventLibrary,
     FvsEventType,
     FvsKeyfile,
@@ -135,6 +136,8 @@ def get_outfile(
         FvsTreeInit,
         Body(examples=[FvsTreeInit.from_records(TEST_TREEINIT_RECORDS)]),
     ] = FvsTreeInit(),
+    treatments: Annotated[list[FvsEvent] | None, Body()] = None,
+    disturbances: Annotated[list[FvsEvent] | None, Body()] = None,
     template: Annotated[
         str, Body(examples=[FvsKeyfileTemplate.DEFAULT])
     ] = FvsKeyfileTemplate.DEFAULT,
