@@ -154,6 +154,11 @@ class FvsKeyfileTemplateParams(BaseModel):
         """A name for the disturbances(s) to be simulated."""
         return "+".join([d.name for d in self.disturbances])
 
+    @field_validator("stand_id", mode="before")
+    def cast_to_str(cls, raw: int | str) -> str:
+        """Casts input value to a string."""
+        return str(raw)
+
     @property
     def expected_fields(self) -> dict:
         """Fields expected (not required) to exist and their values.
@@ -291,7 +296,14 @@ class FvsKeyfile(BaseModel):
         include placeholders that are filled when the extra fields are
         injected.
         """
-        rendered = Template(self.template).render(**self.params.expected_fields)
+        treatment = "\n".join([t.content for t in self.params.treatments])
+        disturbance = "\n".join([d.content for d in self.params.disturbances])
+
+        rendered = Template(self.template).render(
+            **self.params.expected_fields,
+            treatment=treatment,
+            disturbance=disturbance,
+        )
 
         if len(self.params.extra_fields) > 0:
             rendered = Template(rendered).render(**self.params.extra_fields)
@@ -396,15 +408,18 @@ class FvsTreeInit(BaseModel):
                 have this value in the column specified in `column_name`
             column_name (str): the name of the column to use for finding
                 the stand you want, usually "stand_id". Another common
-                option for folks using FIA data might be "stand_cn"
+                option for folks using FIA data might be "stand_cn". The
+                column name is case-insensitive.
         """
         tree_df = df.copy()
         tree_df.columns = [col.lower() for col in tree_df.columns]
+        column_name = column_name.lower()
 
         filtered = tree_df.loc[tree_df[column_name] == stand_id]
+
         if len(filtered) == 0:
             msg = (
-                f"No records found in {column_name} that match {stand_id}. "
+                f"No records found with {column_name}={stand_id}. "
                 f"Returning no trees."
             )
             warnings.warn(msg)
@@ -414,7 +429,12 @@ class FvsTreeInit(BaseModel):
 
     def to_dataframe(self) -> pd.DataFrame:
         """Returns FvsTreeInit as a Pandas DataFrame."""
-        return pd.DataFrame.from_records(self.model_dump()["trees"])
+        trees = self.model_dump().get("trees")
+        if trees is None:
+            return pd.DataFrame(
+                columns=list(FvsTreeInitRecord.model_fields.keys())
+            )
+        return pd.DataFrame.from_records(trees)
 
 
 class FvsStandInit(BaseModel):
@@ -542,6 +562,10 @@ class FvsStandInit(BaseModel):
             raise ValueError(msg)
 
         return FvsStandInit.model_validate(filtered.squeeze().to_dict())
+
+    def to_dataframe(self) -> pd.DataFrame:
+        """Returns FvsStandInit as a Pandas DataFrame."""
+        return pd.DataFrame.from_records([self.model_dump()])
 
 
 class FvsOutputTreeListRecord(BaseModel):
@@ -737,9 +761,13 @@ class FvsResult(BaseModel):
         value: dict[FvsOutputTableName, pd.DataFrame],
     ) -> dict[FvsOutputTableName, list[dict]]:
         """Converts dataframes into dictionary of records."""
-        return {
-            key: val.to_dict(orient="records") for key, val in value.items()
-        }
+        result = {}
+        for key, val in value.items():
+            if isinstance(val, pd.DataFrame):
+                result[key] = val.to_dict(orient="records")
+            else:
+                result[key] = val
+        return result
 
     @staticmethod
     def from_files(

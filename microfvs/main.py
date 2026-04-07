@@ -9,6 +9,7 @@ from fastapi.responses import HTMLResponse, PlainTextResponse
 from microfvs.constants import TEST_STANDINIT_RECORDS, TEST_TREEINIT_RECORDS
 from microfvs.enums import FvsKeyfileTemplate
 from microfvs.models import (
+    FvsEvent,
     FvsEventLibrary,
     FvsEventType,
     FvsKeyfile,
@@ -92,6 +93,18 @@ def run_fvs_batch(
         FvsTreeInit,
         Body(examples=[FvsTreeInit.from_records(TEST_TREEINIT_RECORDS)]),
     ] = FvsTreeInit(),
+    treatments: Annotated[
+        list[FvsEvent] | None,
+        Body(examples=[FvsEvent(name="GROW", content="*** No Treatment ***")]),
+    ] = None,
+    disturbances: Annotated[
+        list[FvsEvent] | None,
+        Body(
+            examples=[
+                FvsEvent(name="UNDISTURBED", content="*** No Disturbance ***")
+            ]
+        ),
+    ] = None,
     limit: int = 1,
     template: Annotated[
         str, Body(examples=[FvsKeyfileTemplate.DEFAULT])
@@ -111,25 +124,19 @@ def run_fvs_batch(
         tree_init (FvsTreeInit, optional): Tree initialization data for
             one or more stands. If not provided, bare ground will be
             simulated.
+        treatments (list[FvsEvent], optional): Treatments to apply.
+            Treatment content may contain template placeholders to be
+            filled by template_params.
+        disturbances (list[FvsEvent], optional): Disturbances to apply.
+            Disturbance content may contain template placeholders to be
+            filled by template_params.
         limit (int, optional): batch size to which the number of
             simulations will be capped.
-        treatments (list[FvsEvent], dict[str, list[FvsEvent]], optional):  # noqa: W505
-            Treatments to be simulated. If specified as a list of
-            FvsEvents, the same set of events will be applied to all
-            stands. Can be specified as a dict with keys referring to
-            stand_ids and dict values corresponding to a list of
-            treatments to apply for that stand. By default, no
-            treatments will be simulated for any stand.
-        disturbances (list[FvsEvent], dict[str, list[FvsEvent]], optional):
-            Disturbances to be simulated. If specified as a list of FvsEvents,
-            the same set of events will be applied to all stands. Can be
-            specified as a dict with keys referring to stand_ids and dict values
-            corresponding to a list of disturbances to apply for that stand. By
-            default, no disturbance will be simulated for any stand.
         template (str, optional): FVS keyfile template to use. Defaults to
             FvsKeyfileTemplate.DEFAULT
-        template_params (dict, optional):
-            Additional parameters to inject into the template
+        template_params (dict, optional): Additional parameters to
+            inject into the keyfile template in the second rendering
+            pass.
         stand_stock_params (FvsStandStockParams): Optional set of parameters to
             govern the generation of a Stand and Stock Table in the FVS
             outputs. Default is to produce the Stand and Stock Table, and
@@ -139,6 +146,8 @@ def run_fvs_batch(
     return run_fvs(
         stand_init=stand_init,
         tree_init=tree_init,
+        treatments=treatments,
+        disturbances=disturbances,
         limit=limit,
         template=template,
         template_params=template_params,
@@ -156,6 +165,8 @@ def get_outfile(
         FvsTreeInit,
         Body(examples=[FvsTreeInit.from_records(TEST_TREEINIT_RECORDS)]),
     ] = FvsTreeInit(),
+    treatments: Annotated[list[FvsEvent] | None, Body()] = None,
+    disturbances: Annotated[list[FvsEvent] | None, Body()] = None,
     template: Annotated[
         str, Body(examples=[FvsKeyfileTemplate.DEFAULT])
     ] = FvsKeyfileTemplate.DEFAULT,
@@ -167,7 +178,7 @@ def get_outfile(
     """Runs FVS and returns the OUT file.
 
     If multiple stands are included in `stand_init`, only the outfile
-    from thefirst stand is returned.
+    from the first stand is returned.
 
     Args:
         stand_init (FvsStandInit): Stand initialization data for one or
@@ -177,24 +188,13 @@ def get_outfile(
         tree_init (FvsTreeInit, optional): Tree initialization data for
             one or more stands. If not provided, bare ground will be
             simulated.
-        treatments (list[FvsEvent], dict[str, list[FvsEvent]], optional):  # noqa: W505
-            Treatments to be simulated. If specified as a list of
-            FvsEvents, the same set of events will be applied to all
-            stands. Can be specified as a dict with keys referring to
-            stand_ids and dict values corresponding to a list of
-            treatments to apply for that stand. By default, no
-            treatments will be simulated for any stand.
-        disturbances (list[FvsEvent], dict[str, list[FvsEvent]], optional):  # noqa: W505
-            Disturbances to be simulated. If specified as a list of
-            FvsEvents, the same set of events will be applied to all
-            stands. Can be specified as a dict with keys referring to
-            stand_ids and dict values corresponding to a list of
-            disturbances to apply for that stand. By default, no
-            disturbance will be simulated for any stand.
+        treatments (list[FvsEvent], optional): Treatments to apply.
+        disturbances (list[FvsEvent], optional): Disturbances to apply.
         template (str, optional): FVS keyfile template to use. Defaults to
             FvsKeyfileTemplate.DEFAULT
-        template_params (dict, optional):
-            Additional parameters to inject into the template
+        template_params (dict, optional): Additional parameters to
+            inject into the keyfile template in the second rendering
+            pass.
         stand_stock_params (FvsStandStockParams): Optional set of parameters to
             govern the generation of a Stand and Stock Table in the FVS
             outputs. Default is to produce the Stand and Stock Table, and
@@ -204,6 +204,8 @@ def get_outfile(
     result = run_fvs(
         stand_init=stand_init,
         tree_init=tree_init,
+        treatments=treatments,
+        disturbances=disturbances,
         limit=1,
         template=template,
         template_params=template_params,
