@@ -10,7 +10,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from jinja2 import Template
+from jinja2 import Environment, StrictUndefined, UndefinedError, meta
 from pydantic import (
     AliasChoices,
     BaseModel,
@@ -50,6 +50,7 @@ from microfvs.enums import (
     FvsOutputTableName,
     FvsVariant,
 )
+from microfvs.exceptions import FvsTemplateRenderError
 from microfvs.utils.sqlite_scraper import FvsSqliteScraper
 
 
@@ -229,6 +230,40 @@ class FvsKeyfile(BaseModel):
         """Joined name of disturbance(s)."""
         return "+".join(d.name for d in self.disturbances)
 
+    @staticmethod
+    def _render_template(template: str, context: dict[str, str]) -> str:
+        """Render a Jinja2 template with StrictUndefined checking.
+
+        Args:
+            template: Jinja2 template string.
+            context: Variable names and values to inject.
+
+        Raises:
+            FvsTemplateRenderError: if the template references a
+                variable not present in *context* and not covered by
+                a Jinja2 ``default`` filter.
+        """
+        env = Environment(undefined=StrictUndefined)
+        ast = env.parse(template)
+        referenced = meta.find_undeclared_variables(ast)
+        provided_keys = set(context.keys())
+        not_provided = sorted(referenced - provided_keys)
+
+        try:
+            return env.from_string(template).render(**context)
+        except UndefinedError as exc:
+            raise FvsTemplateRenderError(
+                message=(
+                    f"Template rendering failed: {exc}. "
+                    f"Template variables: {sorted(referenced)}. "
+                    f"Provided: {sorted(provided_keys)}. "
+                    f"Missing: {not_provided}."
+                ),
+                template_variables=sorted(referenced),
+                provided_variables=sorted(provided_keys),
+                missing_variables=not_provided,
+            ) from exc
+
     @computed_field
     def content(self) -> str:
         """Rendered keyfile text.
@@ -242,18 +277,19 @@ class FvsKeyfile(BaseModel):
         disturbance = "\n".join(d.content for d in self.disturbances)
 
         # first pass
-        # injects fundamental content blocks and template placeholders
-        rendered = Template(self.template).render(
-            stand_id=self.stand_id,
-            treatment=treatment,
-            disturbance=disturbance,
+        context = {
+            "stand_id": self.stand_id,
+            "treatment": treatment,
+            "disturbance": disturbance,
             **self.template_params,
-        )
+        }
+        # injects fundamental content blocks and template placeholders
+        rendered = self._render_template(self.template, context)
 
         # second pass
         # resolves placeholders embedded in first pass injections
         if self.template_params:
-            rendered = Template(rendered).render(**self.template_params)
+            rendered = self._render_template(rendered, self.template_params)
 
         return rendered
 

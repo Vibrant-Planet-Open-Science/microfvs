@@ -16,6 +16,7 @@ from microfvs.constants import (
     TEST_TREEINIT_RECORDS,
 )
 from microfvs.enums import FvsOutputTableName, FvsVariant
+from microfvs.exceptions import FvsTemplateRenderError
 from microfvs.models import (
     FvsEvent,
     FvsEventLibrary,
@@ -246,6 +247,78 @@ def test_keyfile_multiple_treatments_joined():
     keyfile = _make_keyfile(treatments=[t1, t2])
 
     assert "KEYWORD_A\nKEYWORD_B" in keyfile.content
+
+
+# -------------------------------------------------------
+# Template rendering error handling
+# -------------------------------------------------------
+
+
+def test_custom_template_missing_variable_raises():
+    """Undefined variable raises FvsTemplateRenderError."""
+    template = "{{ stand_id }}\n{{ missing_var }}"
+    keyfile = _make_keyfile(template=template)
+    with pytest.raises(FvsTemplateRenderError, match="missing_var"):
+        keyfile.content
+
+
+def test_custom_template_reports_all_missing_variables():
+    """Error reports every unprovided variable, not just the first."""
+    template = "{{ stand_id }}\n{{ aaa }}\n{{ zzz }}"
+    keyfile = _make_keyfile(template=template)
+    with pytest.raises(FvsTemplateRenderError) as exc_info:
+        keyfile.content
+
+    err = exc_info.value
+    assert err.missing_variables == ["aaa", "zzz"]
+    assert "stand_id" in err.template_variables
+    assert "aaa" in err.template_variables
+    assert "zzz" in err.template_variables
+
+
+def test_custom_template_reports_provided_variables():
+    """Error includes provided variable names."""
+    template = "{{ stand_id }}\n{{ missing_var }}"
+    keyfile = _make_keyfile(template=template)
+    with pytest.raises(FvsTemplateRenderError) as exc_info:
+        keyfile.content
+
+    err = exc_info.value
+    assert "stand_id" in err.provided_variables
+    assert "treatment" in err.provided_variables
+    assert "disturbance" in err.provided_variables
+
+
+def test_custom_template_all_variables_provided_renders():
+    """Custom template renders when all variables supplied."""
+    template = "Stand: {{ stand_id }}\nNote: {{ my_note }}"
+    keyfile = _make_keyfile(
+        template=template,
+        template_params={"my_note": "test value"},
+    )
+
+    assert "Stand: 99999" in keyfile.content
+    assert "Note: test value" in keyfile.content
+
+
+def test_default_template_renders_without_template_params():
+    """The default template's | default() filters prevent errors."""
+    keyfile = _make_keyfile()
+    assert keyfile.content  # renders without raising
+
+
+def test_second_pass_missing_variable_raises():
+    """Treatment placeholder raises on second pass."""
+    treatment = FvsEvent(
+        name="BAD",
+        content="THINDBH  {{ missing_param }}",
+    )
+    keyfile = _make_keyfile(
+        treatments=[treatment],
+        template_params={"some_other_param": 1},
+    )
+    with pytest.raises(FvsTemplateRenderError, match="missing_param"):
+        keyfile.content
 
 
 # -------------------------------------------------------
