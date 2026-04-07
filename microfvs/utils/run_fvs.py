@@ -1,4 +1,3 @@
-import logging
 import os
 import sqlite3
 import subprocess
@@ -95,17 +94,6 @@ def run_fvs(
                 stacklevel=2,
             )
 
-    declared_fields = set(FvsKeyfileTemplateParams.model_fields.keys())
-    extra_params = {}
-    for k, v in template_params.items():
-        if k in declared_fields:
-            logging.debug(
-                f"{k} in template_params is ignored; "
-                "use the explicit argument instead.",
-            )
-        else:
-            extra_params[k] = v
-
     while len(results) < limit and MORE_STANDS_TO_PROCESS:
         for idx, row in stand_init_df.iterrows():
             with tempfile.TemporaryDirectory() as temp_dir:
@@ -125,17 +113,12 @@ def run_fvs(
                     "fvs_treeinit", conn, if_exists="replace", index=False
                 )
 
-                param_kwargs: dict = {
-                    "variant": fvs_variant,
-                    "stand_id": stand_id,
-                }
-                if treatments is not None:
-                    param_kwargs["treatments"] = treatments
-                if disturbances is not None:
-                    param_kwargs["disturbances"] = disturbances
-
-                params = FvsKeyfileTemplateParams(
-                    **param_kwargs, **extra_params
+                params = FvsKeyfileTemplateParams.build(
+                    variant=fvs_variant,
+                    stand_id=stand_id,
+                    treatments=treatments,
+                    disturbances=disturbances,
+                    template_params=template_params,
                 )
                 keyfile = FvsKeyfile(template=template, params=params)
 

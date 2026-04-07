@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.resources
+import logging
 import os
 import subprocess
 import warnings
@@ -180,6 +181,41 @@ class FvsKeyfileTemplateParams(BaseModel):
         injected.
         """
         return self.model_extra
+
+    @classmethod
+    def build(
+        cls,
+        *,
+        variant: FvsVariant,
+        stand_id: str | int,
+        treatments: list[FvsEvent] | None = None,
+        disturbances: list[FvsEvent] | None = None,
+        template_params: dict | None = None,
+    ) -> FvsKeyfileTemplateParams:
+        """Construct params with safe handling of extra template keys.
+
+        Keys in `template_params` that collide with declared model
+        fields are silently dropped (logged at DEBUG level) so that
+        the explicit arguments always win.
+        """
+        kwargs: dict = {"variant": variant, "stand_id": stand_id}
+        if treatments is not None:
+            kwargs["treatments"] = treatments
+        if disturbances is not None:
+            kwargs["disturbances"] = disturbances
+
+        if template_params:
+            declared = set(cls.model_fields.keys())
+            for k, v in template_params.items():
+                if k in declared:
+                    logging.debug(
+                        f"{k} in template_params ignored; "
+                        "use the explicit argument instead."
+                    )
+                else:
+                    kwargs[k] = v
+
+        return cls(**kwargs)
 
     @field_validator("treatments", mode="before")
     @classmethod
