@@ -37,7 +37,8 @@ async def template_render_error_handler(
             "detail": str(exc),
             "template_variables": exc.template_variables,
             "provided_variables": exc.provided_variables,
-            "missing_variables": exc.missing_variables,
+            "missing_required": exc.missing_required,
+            "missing_optional": exc.missing_optional,
         },
     )
 

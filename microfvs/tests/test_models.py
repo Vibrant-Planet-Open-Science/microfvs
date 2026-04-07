@@ -270,7 +270,7 @@ def test_custom_template_reports_all_missing_variables():
         keyfile.content
 
     err = exc_info.value
-    assert err.missing_variables == ["aaa", "zzz"]
+    assert err.missing_required == ["aaa", "zzz"]
     assert "stand_id" in err.template_variables
     assert "aaa" in err.template_variables
     assert "zzz" in err.template_variables
