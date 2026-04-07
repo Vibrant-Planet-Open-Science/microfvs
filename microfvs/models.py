@@ -165,50 +165,12 @@ class FvsKeyfile(BaseModel):
 
     model_config = ConfigDict(use_enum_values=True)
 
-    @field_validator("stand_id", mode="before")
-    @classmethod
-    def _cast_stand_id(cls, raw: int | str) -> str:
-        return str(raw)
-
-    @field_validator("treatments", mode="before")
-    @classmethod
-    def _resolve_treatments(
-        cls, value: str | FvsEvent | list[str | FvsEvent]
-    ) -> list[FvsEvent]:
-        """Coerce string keys to FvsEvent via library lookup."""
-        return cls._resolve_events(value, FvsEventType.TREATMENT)
-
-    @field_validator("disturbances", mode="before")
-    @classmethod
-    def _resolve_disturbances(
-        cls, value: str | FvsEvent | list[str | FvsEvent]
-    ) -> list[FvsEvent]:
-        """Coerce string keys to FvsEvent via library lookup."""
-        return cls._resolve_events(value, FvsEventType.DISTURBANCE)
-
-    @staticmethod
-    def _resolve_events(
-        value: str | FvsEvent | list[str | FvsEvent],
-        event_type: FvsEventType,
-    ) -> list[FvsEvent]:
-        library = FvsEventLibrary()
-        if isinstance(value, str):
-            return [library.lookup(event_type=event_type, event_key=value)]
-        if isinstance(value, Sequence):
-            return [
-                library.lookup(event_type=event_type, event_key=v)
-                if isinstance(v, str)
-                else v
-                for v in value
-            ]
-        return []
-
     @computed_field
     def name(self) -> str:
         """Pattern: {variant}_{stand_id}_{treatments}_{disturbances}."""
         return "_".join(
             [
-                self.variant,
+                self.fvs_variant,
                 self.stand_id,
                 self.treatment_name,
                 self.disturbance_name,
@@ -229,6 +191,53 @@ class FvsKeyfile(BaseModel):
     def disturbance_name(self) -> str:
         """Joined name of disturbance(s)."""
         return "+".join(d.name for d in self.disturbances)
+
+    @computed_field
+    def content(self) -> str:
+        """Rendered keyfile text.
+
+        Pass 1 injects stand_id, treatment/disturbance content, and
+        all template_params into the template.  Pass 2 re-renders the
+        result with template_params so that placeholders embedded
+        inside treatment/disturbance content are resolved.
+        """
+        treatment = "\n".join(t.content for t in self.treatments)
+        disturbance = "\n".join(d.content for d in self.disturbances)
+
+        context = {
+            "stand_id": self.stand_id,
+            "treatment": treatment,
+            "disturbance": disturbance,
+            **self.template_params,
+        }
+
+        rendered = self._render_template(self.template, context)
+
+        if self.template_params:
+            rendered = self._render_template(rendered, self.template_params)
+
+        return rendered
+
+    @field_validator("disturbances", mode="before")
+    @classmethod
+    def _resolve_disturbances(
+        cls, value: str | FvsEvent | list[str | FvsEvent]
+    ) -> list[FvsEvent]:
+        """Coerce string keys to FvsEvent via library lookup."""
+        return cls._resolve_events(value, FvsEventType.DISTURBANCE)
+
+    @field_validator("stand_id", mode="before")
+    @classmethod
+    def _cast_stand_id(cls, raw: int | str) -> str:
+        return str(raw)
+
+    @field_validator("treatments", mode="before")
+    @classmethod
+    def _resolve_treatments(
+        cls, value: str | FvsEvent | list[str | FvsEvent]
+    ) -> list[FvsEvent]:
+        """Coerce string keys to FvsEvent via library lookup."""
+        return cls._resolve_events(value, FvsEventType.TREATMENT)
 
     @staticmethod
     def _render_template(template: str, context: dict[str, str]) -> str:
@@ -265,34 +274,22 @@ class FvsKeyfile(BaseModel):
                 missing_variables=not_provided,
             ) from exc
 
-    @computed_field
-    def content(self) -> str:
-        """Rendered keyfile text.
-
-        Pass 1 injects stand_id, treatment/disturbance content, and
-        all template_params into the template.  Pass 2 re-renders the
-        result with template_params so that placeholders embedded
-        inside treatment/disturbance content are resolved.
-        """
-        treatment = "\n".join(t.content for t in self.treatments)
-        disturbance = "\n".join(d.content for d in self.disturbances)
-
-        # first pass
-        context = {
-            "stand_id": self.stand_id,
-            "treatment": treatment,
-            "disturbance": disturbance,
-            **self.template_params,
-        }
-        # injects fundamental content blocks and template placeholders
-        rendered = self._render_template(self.template, context)
-
-        # second pass
-        # resolves placeholders embedded in first pass injections
-        if self.template_params:
-            rendered = self._render_template(rendered, self.template_params)
-
-        return rendered
+    @staticmethod
+    def _resolve_events(
+        value: str | FvsEvent | list[str | FvsEvent],
+        event_type: FvsEventType,
+    ) -> list[FvsEvent]:
+        library = FvsEventLibrary()
+        if isinstance(value, str):
+            return [library.lookup(event_type=event_type, event_key=value)]
+        if isinstance(value, Sequence):
+            return [
+                library.lookup(event_type=event_type, event_key=v)
+                if isinstance(v, str)
+                else v
+                for v in value
+            ]
+        return []
 
 
 class FvsTreeInitRecord(BaseModel):
@@ -367,18 +364,14 @@ class FvsTreeInit(BaseModel):
 
     trees: list[FvsTreeInitRecord] | None = None
 
-    @staticmethod
-    def from_records(records: list[dict] | None) -> FvsTreeInit:
-        """Creates FvsTreeInit from a list of tree records as dicts.
-
-        Args:
-            records (list[dict] | None): tree records to incorporate.
-        """
-        if records is None:
-            return FvsTreeInit()
-        return FvsTreeInit(
-            trees=[FvsTreeInitRecord.model_validate(r) for r in records]
-        )
+    def to_dataframe(self) -> pd.DataFrame:
+        """Returns FvsTreeInit as a Pandas DataFrame."""
+        trees = self.model_dump().get("trees")
+        if trees is None:
+            return pd.DataFrame(
+                columns=list(FvsTreeInitRecord.model_fields.keys())
+            )
+        return pd.DataFrame.from_records(trees)
 
     @staticmethod
     def from_dataframe(
@@ -411,14 +404,18 @@ class FvsTreeInit(BaseModel):
 
         return FvsTreeInit.from_records(filtered.to_dict(orient="records"))
 
-    def to_dataframe(self) -> pd.DataFrame:
-        """Returns FvsTreeInit as a Pandas DataFrame."""
-        trees = self.model_dump().get("trees")
-        if trees is None:
-            return pd.DataFrame(
-                columns=list(FvsTreeInitRecord.model_fields.keys())
-            )
-        return pd.DataFrame.from_records(trees)
+    @staticmethod
+    def from_records(records: list[dict] | None) -> FvsTreeInit:
+        """Creates FvsTreeInit from a list of tree records as dicts.
+
+        Args:
+            records (list[dict] | None): tree records to incorporate.
+        """
+        if records is None:
+            return FvsTreeInit()
+        return FvsTreeInit(
+            trees=[FvsTreeInitRecord.model_validate(r) for r in records]
+        )
 
 
 class FvsStandInit(BaseModel):
@@ -508,6 +505,10 @@ class FvsStandInit(BaseModel):
         """Casts input value to a string."""
         return str(raw)
 
+    def to_dataframe(self) -> pd.DataFrame:
+        """Returns FvsStandInit as a Pandas DataFrame."""
+        return pd.DataFrame.from_records([self.model_dump()])
+
     @staticmethod
     def from_dataframe(
         df: pd.DataFrame,
@@ -546,10 +547,6 @@ class FvsStandInit(BaseModel):
             raise ValueError(msg)
 
         return FvsStandInit.model_validate(filtered.squeeze().to_dict())
-
-    def to_dataframe(self) -> pd.DataFrame:
-        """Returns FvsStandInit as a Pandas DataFrame."""
-        return pd.DataFrame.from_records([self.model_dump()])
 
 
 class FvsOutputTreeListRecord(BaseModel):
@@ -679,7 +676,6 @@ class FvsResult(BaseModel):
             from the FVS output database
     """
 
-    model_config = ConfigDict(arbitrary_types_allowed=True, frozen=True)
     name: str
     fvs_variant: str
     stand_id: str
@@ -692,6 +688,8 @@ class FvsResult(BaseModel):
     stderr: str | None
     fvs_data: dict[FvsOutputTableName, list[dict]]
     outfile: str
+
+    model_config = ConfigDict(arbitrary_types_allowed=True, frozen=True)
 
     @computed_field
     def fvs_warnings(self) -> list[FvsOutfileProblem] | None:
