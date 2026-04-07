@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import importlib.resources
-import logging
 import os
 import subprocess
 import warnings
@@ -126,142 +125,6 @@ class FvsEventLibrary:
         raise ValueError(msg)
 
 
-class FvsKeyfileTemplateParams(BaseModel):
-    """Parameters injected into Keyfile template for a simulation."""
-
-    variant: FvsVariant
-    stand_id: str
-    num_cycles: int = 1
-    cycle_length: int = 5
-    treatments: list[FvsEvent] = [
-        FvsEvent(name="NONE", content="*** NO TREATMENT ***")
-    ]
-    disturbances: list[FvsEvent] = [
-        FvsEvent(name="NONE", content="*** NO DISTURBANCE ***")
-    ]
-
-    model_config = ConfigDict(
-        extra="allow",
-        use_enum_values=True,
-    )
-
-    @computed_field
-    def treatment_name(self) -> str:
-        """A name for the treatment(s) to be simulated."""
-        return "+".join([t.name for t in self.treatments])
-
-    @computed_field
-    def disturbance_name(self) -> str:
-        """A name for the disturbances(s) to be simulated."""
-        return "+".join([d.name for d in self.disturbances])
-
-    @field_validator("stand_id", mode="before")
-    def cast_to_str(cls, raw: int | str) -> str:
-        """Casts input value to a string."""
-        return str(raw)
-
-    @property
-    def expected_fields(self) -> dict:
-        """Fields expected (not required) to exist and their values.
-
-        These are injected into a keyfile in an initial step before
-        extra fields are injected.
-        """
-        return {
-            key: value
-            for key, value in self.model_dump().items()
-            if key not in self.model_extra
-        }
-
-    @property
-    def extra_fields(self) -> dict:
-        """Extra fields to be defined and their values.
-
-        These are injected into a keyfile after expected fields are
-        injected.
-        """
-        return self.model_extra
-
-    @classmethod
-    def build(
-        cls,
-        *,
-        variant: FvsVariant,
-        stand_id: str | int,
-        treatments: list[FvsEvent] | None = None,
-        disturbances: list[FvsEvent] | None = None,
-        template_params: dict | None = None,
-    ) -> FvsKeyfileTemplateParams:
-        """Construct params with safe handling of extra template keys.
-
-        Keys in `template_params` that collide with declared model
-        fields are silently dropped (logged at DEBUG level) so that
-        the explicit arguments always win.
-        """
-        kwargs: dict = {"variant": variant, "stand_id": stand_id}
-        if treatments is not None:
-            kwargs["treatments"] = treatments
-        if disturbances is not None:
-            kwargs["disturbances"] = disturbances
-
-        if template_params:
-            declared = set(cls.model_fields.keys())
-            for k, v in template_params.items():
-                if k in declared:
-                    logging.debug(
-                        f"{k} in template_params ignored; "
-                        "use the explicit argument instead."
-                    )
-                else:
-                    kwargs[k] = v
-
-        return cls(**kwargs)
-
-    @field_validator("treatments", mode="before")
-    @classmethod
-    def check_treatment(
-        cls, value: str | FvsEvent | list[str] | list[FvsEvent]
-    ) -> list[FvsEvent] | None:
-        """Converts treatment(s) into list of FvsEvent."""
-        library = FvsEventLibrary()
-        if isinstance(value, str):
-            return [
-                library.lookup(
-                    event_type=FvsEventType.TREATMENT, event_key=value
-                )
-            ]
-        if isinstance(value, Sequence):
-            return [
-                library.lookup(event_type=FvsEventType.TREATMENT, event_key=v)
-                if isinstance(v, str)
-                else v
-                for v in value
-            ]
-        return [FvsEvent(name="GROW", content="*** No Treatment ***")]
-
-    @field_validator("disturbances", mode="before")
-    @classmethod
-    def check_disturbance(
-        cls, value: str | FvsEvent | list[str] | list[FvsEvent]
-    ) -> list[FvsEvent] | None:
-        """Converts disturbance(s) into list of FvsEvent."""
-        library = FvsEventLibrary()
-        if isinstance(value, str):
-            return [
-                library.lookup(
-                    event_type=FvsEventType.DISTURBANCE, event_key=value
-                )
-            ]
-        if isinstance(value, Sequence):
-            return [
-                library.lookup(event_type=FvsEventType.DISTURBANCE, event_key=v)
-                if isinstance(v, str)
-                else v
-                for v in value
-            ]
-        return [FvsEvent(name="UNDISTURBED", content="*** No Disturbance ***")]
-
-
 class FvsStandStockParams(BaseModel):
     """Params for Stand and Stock Tables when scraping FVS results."""
 
@@ -271,78 +134,122 @@ class FvsStandStockParams(BaseModel):
 
 
 class FvsKeyfile(BaseModel):
-    """A model documenting a keyfile for running FVS on a single stand.
+    """A model for constructing and rendering an FVS keyfile.
 
     Args:
-        template (str): Optional Jinja template for the FVS Keyfile,
-            defaults to FvsKeyfileTemplate.DEFAULT
-        params (FvsKeyfileTemplateParams): Parameters to be injected
-            into the keyfile template.
-
-    Computed Attributes:
-        name (str): concatenation of
-            {fvs_variant}_{stand_id}_{treatment_name}_{disturbance_name}.
-        stand_id (str): Stand identifier.
-        fvs_variant (FvsVariant): The regional variant of FVS.
-        content (str): the full text of the FVS Keyfile.
+        variant (FvsVariant): Regional FVS variant, used for binary
+            selection and keyfile naming.
+        stand_id (str): Stand identifier, rendered into the template.
+        treatments (list[FvsEvent]): Treatment events whose content
+            is injected into the keyfile. Accepts FvsEvent objects,
+            dicts, or string keys that are resolved via the event
+            library.
+        disturbances (list[FvsEvent]): Disturbance events. Same
+            coercion rules as treatments.
+        template (str): Jinja2 template for the keyfile.
+        template_params (dict): All other template variables
+            (e.g. num_cycles, cycle_length, custom placeholders).
     """
 
+    variant: FvsVariant
+    stand_id: str
+    treatments: list[FvsEvent] = [
+        FvsEvent(name="NONE", content="*** NO TREATMENT ***")
+    ]
+    disturbances: list[FvsEvent] = [
+        FvsEvent(name="NONE", content="*** NO DISTURBANCE ***")
+    ]
     template: str = FvsKeyfileTemplate.DEFAULT
-    params: FvsKeyfileTemplateParams
+    template_params: dict = {}
+
+    model_config = ConfigDict(use_enum_values=True)
+
+    @field_validator("stand_id", mode="before")
+    @classmethod
+    def _cast_stand_id(cls, raw: int | str) -> str:
+        return str(raw)
+
+    @field_validator("treatments", mode="before")
+    @classmethod
+    def _resolve_treatments(
+        cls, value: str | FvsEvent | list[str | FvsEvent]
+    ) -> list[FvsEvent]:
+        """Coerce string keys to FvsEvent via library lookup."""
+        return cls._resolve_events(value, FvsEventType.TREATMENT)
+
+    @field_validator("disturbances", mode="before")
+    @classmethod
+    def _resolve_disturbances(
+        cls, value: str | FvsEvent | list[str | FvsEvent]
+    ) -> list[FvsEvent]:
+        """Coerce string keys to FvsEvent via library lookup."""
+        return cls._resolve_events(value, FvsEventType.DISTURBANCE)
+
+    @staticmethod
+    def _resolve_events(
+        value: str | FvsEvent | list[str | FvsEvent],
+        event_type: FvsEventType,
+    ) -> list[FvsEvent]:
+        library = FvsEventLibrary()
+        if isinstance(value, str):
+            return [library.lookup(event_type=event_type, event_key=value)]
+        if isinstance(value, Sequence):
+            return [
+                library.lookup(event_type=event_type, event_key=v)
+                if isinstance(v, str)
+                else v
+                for v in value
+            ]
+        return []
 
     @computed_field
     def name(self) -> str:
-        """Name of FVS Keyfile."""
+        """Pattern: {variant}_{stand_id}_{treatments}_{disturbances}."""
         return "_".join(
             [
-                self.params.variant,
-                self.params.stand_id,
-                self.params.treatment_name,
-                self.params.disturbance_name,
+                self.variant,
+                self.stand_id,
+                self.treatment_name,
+                self.disturbance_name,
             ]
         )
 
     @computed_field
-    def stand_id(self) -> str:
-        """Stand ID for stand being run in Keyfile."""
-        return str(self.params.stand_id)
-
-    @computed_field
     def fvs_variant(self) -> str:
-        """Name of FVS Variant."""
-        return self.params.variant
+        """Regional FVS variant code."""
+        return self.variant
 
     @computed_field
     def treatment_name(self) -> str:
-        """Name of treatment(s) applied."""
-        return self.params.treatment_name
+        """Joined name of treatment(s)."""
+        return "+".join(t.name for t in self.treatments)
 
     @computed_field
     def disturbance_name(self) -> str:
-        """Name of disturbance(s) applied."""
-        return self.params.disturbance_name
+        """Joined name of disturbance(s)."""
+        return "+".join(d.name for d in self.disturbances)
 
     @computed_field
     def content(self) -> str:
-        """Content of the FVS Keyfile.
+        """Rendered keyfile text.
 
-        The template is rendered in two distinct steps. First, expected
-        fields are injected into the template. Second, any extra fields
-        are injected.This allows the content of expected fields to
-        include placeholders that are filled when the extra fields are
-        injected.
+        Pass 1 injects stand_id, treatment/disturbance content, and
+        all template_params into the template.  Pass 2 re-renders the
+        result with template_params so that placeholders embedded
+        inside treatment/disturbance content are resolved.
         """
-        treatment = "\n".join([t.content for t in self.params.treatments])
-        disturbance = "\n".join([d.content for d in self.params.disturbances])
+        treatment = "\n".join(t.content for t in self.treatments)
+        disturbance = "\n".join(d.content for d in self.disturbances)
 
         rendered = Template(self.template).render(
-            **self.params.expected_fields,
+            stand_id=self.stand_id,
             treatment=treatment,
             disturbance=disturbance,
+            **self.template_params,
         )
 
-        if len(self.params.extra_fields) > 0:
-            rendered = Template(rendered).render(**self.params.extra_fields)
+        if self.template_params:
+            rendered = Template(rendered).render(**self.template_params)
 
         return rendered
 

@@ -90,11 +90,11 @@ END
 ** MODEL PERIOD CONFIGURATION
 ** Define step size, number of cycles, etc.
 ********************************************************************************
-TIMEINT            0{{"{:>10d}".format(cycle_length)}}
+TIMEINT            0{{"{:>10d}".format(cycle_length | default(5))}}
 {% if first_cycle_length is defined -%}
 TIMEINT            1{{"{:>10d}".format(first_cycle_length)}}
 {%- endif %}
-NUMCYCLE  {{"{:>10d}".format(num_cycles)}}
+NUMCYCLE  {{"{:>10d}".format(num_cycles | default(1))}}
 
 
 ********************************************************************************

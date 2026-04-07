@@ -21,7 +21,6 @@ from microfvs.models import (
     FvsEventLibrary,
     FvsEventType,
     FvsKeyfile,
-    FvsKeyfileTemplateParams,
     FvsOutputTreeListRecord,
     FvsResult,
     FvsStandInit,
@@ -65,23 +64,14 @@ def test_standid_as_int():
 
 
 def test_keyfile_name():
-    stand_init = FvsStandInit(
-        stand_id=12345,
+    keyfile = FvsKeyfile(
         variant=FvsVariant.CA,
-        inv_year=1990,
-        basal_area_factor=0,
-        inv_plot_size=1,
-        brk_dbh=999,
-    )
-    params = FvsKeyfileTemplateParams(
-        variant=stand_init.variant,
-        stand_id=stand_init.stand_id,
+        stand_id="12345",
         treatments=[TEST_FVS_TREATMENT],
         disturbances=[TEST_FVS_DISTURBANCE],
     )
-    keyfile = FvsKeyfile(params=params)
     assert keyfile.name == (
-        f"{FvsVariant.CA}_{12345}_"
+        f"{FvsVariant.CA}_12345_"
         f"{TEST_FVS_TREATMENT.name}_{TEST_FVS_DISTURBANCE.name}"
     )
 
@@ -110,15 +100,11 @@ def test_random_treelist(num_trees):
 
 
 def test_fvs_result(tmp_path):
-    params = FvsKeyfileTemplateParams(
-        stand_id="12345",
+    keyfile = FvsKeyfile(
         variant=FvsVariant.CA,
-        inv_year=1990,
-        basal_area_factor=0,
-        inv_plot_size=1,
-        brk_dbh=999,
+        stand_id="12345",
+        template=RESULT_TESTING_KEYFILE_CONTENT,
     )
-    keyfile = FvsKeyfile(template=RESULT_TESTING_KEYFILE_CONTENT, params=params)
     keyfile_path = f"{tmp_path}/{keyfile.name}.key"
     with open(keyfile_path, "w") as f:
         f.write(keyfile.content)
@@ -179,13 +165,12 @@ def test_parse_fvs_warnings_errors():
 def test_fvskeyfile():
     stand_init = FvsStandInit.model_validate(TEST_STANDINIT_RECORDS[0])
 
-    params = FvsKeyfileTemplateParams(
+    keyfile = FvsKeyfile(
         variant=stand_init.variant,
         stand_id=stand_init.stand_id,
         treatments=[TEST_FVS_TREATMENT],
         disturbances=[TEST_FVS_DISTURBANCE],
     )
-    keyfile = FvsKeyfile(params=params)
 
     assert isinstance(keyfile, FvsKeyfile)
     assert keyfile.stand_id == stand_init.stand_id
@@ -203,17 +188,15 @@ def test_fvskeyfile():
 # -------------------------------------------------------
 
 
-def _make_params(**overrides) -> FvsKeyfileTemplateParams:
-    """Helper to build templte params with sensible defaults."""
-    defaults = {"variant": FvsVariant.CA, "stand_id": "99999"}
+def _make_keyfile(**overrides) -> FvsKeyfile:
+    """Helper to build a FvsKeyfile with sensible defaults."""
+    defaults: dict = {"variant": FvsVariant.CA, "stand_id": "99999"}
     defaults.update(overrides)
-    return FvsKeyfileTemplateParams(**defaults)
+    return FvsKeyfile(**defaults)
 
 
 def test_keyfile_default_when_no_events():
-
-    params = _make_params()
-    keyfile = FvsKeyfile(params=params)
+    keyfile = _make_keyfile()
 
     assert NO_TREATMENT_MARKER in keyfile.content
     assert NO_DISTURBANCE_MARKER in keyfile.content
@@ -222,8 +205,7 @@ def test_keyfile_default_when_no_events():
 def test_keyfile_renders_treatment_content():
     TREATMENT_MARKER = "THINDBH            0        60       200"
     treatment = FvsEvent(name="MY_THIN", content=TREATMENT_MARKER)
-    params = _make_params(treatments=[treatment])
-    keyfile = FvsKeyfile(params=params)
+    keyfile = _make_keyfile(treatments=[treatment])
 
     assert TREATMENT_MARKER in keyfile.content
     assert NO_TREATMENT_MARKER not in keyfile.content
@@ -232,8 +214,7 @@ def test_keyfile_renders_treatment_content():
 def test_keyfile_renders_disturbance_content():
     DISTURBANCE_MARKER = "SALVAGE            0       999"
     disturbance = FvsEvent(name="MY_SALVAGE", content=DISTURBANCE_MARKER)
-    params = _make_params(disturbances=[disturbance])
-    keyfile = FvsKeyfile(params=params)
+    keyfile = _make_keyfile(disturbances=[disturbance])
 
     assert DISTURBANCE_MARKER in keyfile.content
     assert NO_DISTURBANCE_MARKER not in keyfile.content
@@ -249,11 +230,10 @@ def test_keyfile_two_pass_rendering():
         name="PARAM_THIN",
         content=TREATMENT_WITH_PLACEHOLDER,
     )
-    params = _make_params(
+    keyfile = _make_keyfile(
         treatments=[treatment],
-        thin_max_dbh=INJECT_VALUE,
+        template_params={"thin_max_dbh": INJECT_VALUE},
     )
-    keyfile = FvsKeyfile(params=params)
 
     assert PLACEHOLDER in TREATMENT_WITH_PLACEHOLDER
     assert PLACEHOLDER not in keyfile.content
@@ -263,8 +243,7 @@ def test_keyfile_two_pass_rendering():
 def test_keyfile_multiple_treatments_joined():
     t1 = FvsEvent(name="T1", content="KEYWORD_A")
     t2 = FvsEvent(name="T2", content="KEYWORD_B")
-    params = _make_params(treatments=[t1, t2])
-    keyfile = FvsKeyfile(params=params)
+    keyfile = _make_keyfile(treatments=[t1, t2])
 
     assert "KEYWORD_A\nKEYWORD_B" in keyfile.content
 

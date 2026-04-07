@@ -6,7 +6,6 @@ from microfvs.models import (
     FvsEventLibrary,
     FvsEventType,
     FvsKeyfile,
-    FvsKeyfileTemplateParams,
     FvsResult,
     FvsStandInit,
     FvsTreeInit,
@@ -41,24 +40,25 @@ MISMATCHED_STANDINIT = FvsStandInit(
 
 
 def test_run_fvs():
-    params = FvsKeyfileTemplateParams(
+    ref_keyfile = FvsKeyfile(
         variant=TEST_STANDINIT.variant,
         stand_id=TEST_STANDINIT.stand_id,
         treatments=[TEST_TREATMENT],
         disturbances=[TEST_DISTURBANCE],
     )
-    keyfile = FvsKeyfile(params=params)
 
     result = run_fvs(
         stand_init=TEST_STANDINIT,
         tree_init=TEST_TREEINIT,
-        treatments=[TEST_TREATMENT],
-        disturbances=[TEST_DISTURBANCE],
+        template_params={
+            "treatments": [TEST_TREATMENT],
+            "disturbances": [TEST_DISTURBANCE],
+        },
     )
 
     assert isinstance(result, FvsResult)
     assert result.return_code == 0
-    assert result.keyfile == keyfile.content
+    assert result.keyfile == ref_keyfile.content
     assert result.outfile is not None
     assert result.fvs_warnings is None
     assert set(result.fvs_data.keys()).issuperset(
