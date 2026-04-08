@@ -10,7 +10,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from jinja2 import Template
 from pydantic import (
     AliasChoices,
     BaseModel,
@@ -51,6 +50,7 @@ from microfvs.enums import (
     FvsVariant,
 )
 from microfvs.utils.sqlite_scraper import FvsSqliteScraper
+from microfvs.utils.template_helpers import render_template
 
 
 class FvsEvent(BaseModel):
@@ -241,15 +241,17 @@ class FvsKeyfile(BaseModel):
         treatment = "\n".join(t.content for t in self.treatments)
         disturbance = "\n".join(d.content for d in self.disturbances)
 
-        rendered = Template(self.template).render(
-            stand_id=self.stand_id,
-            treatment=treatment,
-            disturbance=disturbance,
+        context = {
+            "stand_id": self.stand_id,
+            "treatment": treatment,
+            "disturbance": disturbance,
             **self.template_params,
-        )
+        }
+
+        rendered = render_template(self.template, context)
 
         if self.template_params:
-            rendered = Template(rendered).render(**self.template_params)
+            rendered = render_template(rendered, self.template_params)
 
         return rendered
 

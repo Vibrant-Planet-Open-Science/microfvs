@@ -3,11 +3,12 @@ from __future__ import annotations
 import importlib.resources
 from typing import Annotated
 
-from fastapi import Body, FastAPI, HTTPException
-from fastapi.responses import HTMLResponse, PlainTextResponse
+from fastapi import Body, FastAPI, HTTPException, Request
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 
 from microfvs.constants import TEST_STANDINIT_RECORDS, TEST_TREEINIT_RECORDS
 from microfvs.enums import FvsKeyfileTemplate
+from microfvs.exceptions import FvsTemplateRenderError
 from microfvs.models import (
     FvsEventLibrary,
     FvsEventType,
@@ -22,6 +23,24 @@ from microfvs.utils.fvs_version import get_fvs_versions
 from microfvs.utils.run_fvs import run_fvs
 
 app = FastAPI()
+
+
+@app.exception_handler(FvsTemplateRenderError)
+async def template_render_error_handler(
+    request: Request,  # noqa: ARG001
+    exc: FvsTemplateRenderError,
+) -> JSONResponse:
+    """Return a 422 with details about missing template variables."""
+    return JSONResponse(
+        status_code=422,
+        content={
+            "detail": str(exc),
+            "template_variables": exc.template_variables,
+            "provided_variables": exc.provided_variables,
+            "missing_required": exc.missing_required,
+            "missing_optional": exc.missing_optional,
+        },
+    )
 
 
 @app.get("/", response_class=HTMLResponse)
