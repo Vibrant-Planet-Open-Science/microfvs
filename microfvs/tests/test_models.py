@@ -411,6 +411,59 @@ def test_stand_init_to_dataframe():
     assert df.iloc[0]["variant"] == stand.variant
 
 
+def test_tree_init_from_dataframe_happy_path():
+    df = pd.DataFrame(TEST_TREEINIT_RECORDS)
+    stand_id = TEST_STANDINIT_RECORDS[0]["stand_id"]
+
+    tree_init = FvsTreeInit.from_dataframe(df, stand_id=stand_id)
+
+    assert tree_init.trees is not None
+    assert len(tree_init.trees) == len(TEST_TREEINIT_RECORDS)
+    assert all(t.stand_id == stand_id for t in tree_init.trees)
+
+
+def test_tree_init_to_dataframe_roundtrip():
+    df_in = pd.DataFrame(TEST_TREEINIT_RECORDS)
+    stand_id = TEST_STANDINIT_RECORDS[0]["stand_id"]
+    tree_init = FvsTreeInit.from_dataframe(df_in, stand_id=stand_id)
+
+    df_out = tree_init.to_dataframe()
+
+    assert isinstance(df_out, pd.DataFrame)
+    assert len(df_out) == len(TEST_TREEINIT_RECORDS)
+    assert set(FvsTreeInitRecord.model_fields.keys()).issubset(
+        set(df_out.columns)
+    )
+    assert all(df_out["stand_id"] == stand_id)
+
+
+def test_stand_init_from_dataframe_happy_path():
+    df = pd.DataFrame(TEST_STANDINIT_RECORDS)
+    stand_id = TEST_STANDINIT_RECORDS[0]["stand_id"]
+
+    stand = FvsStandInit.from_dataframe(df, stand_id=stand_id)
+
+    assert isinstance(stand, FvsStandInit)
+    assert stand.stand_id == stand_id
+    assert stand.variant == TEST_STANDINIT_RECORDS[0]["variant"]
+
+
+def test_stand_init_from_dataframe_zero_matches_raises():
+    df = pd.DataFrame(TEST_STANDINIT_RECORDS)
+
+    with pytest.raises(ValueError, match="Found 0 records"):
+        FvsStandInit.from_dataframe(df, stand_id="NONEXISTENT")
+
+
+def test_stand_init_from_dataframe_multiple_matches_raises():
+    duplicate_records = [TEST_STANDINIT_RECORDS[0], TEST_STANDINIT_RECORDS[0]]
+    df = pd.DataFrame(duplicate_records)
+    stand_id = TEST_STANDINIT_RECORDS[0]["stand_id"]
+
+    with pytest.raises(ValueError, match="Found 2 records"):
+        FvsStandInit.from_dataframe(df, stand_id=stand_id)
+
+
 def test_result_serialize_mixed_types():
     table_name = FvsOutputTableName.FVS_SUMMARY2
     records = [{"CaseID": "test", "Year": 2020, "BA": 100.0}]
