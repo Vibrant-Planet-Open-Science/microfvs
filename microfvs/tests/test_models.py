@@ -131,9 +131,8 @@ def test_fvs_result(tmp_path):
         set(EXPECTED_POPULATED_TABLES)
     )
     for table in EXPECTED_POPULATED_TABLES:
-        assert isinstance(result.fvs_data[table], list)
+        assert isinstance(result.fvs_data[table], pd.DataFrame)
         assert len(result.fvs_data[table]) > 0
-        assert isinstance(result.fvs_data[table][0], dict)
 
     dumped = result.model_dump()
     assert isinstance(dumped, dict)
@@ -464,14 +463,67 @@ def test_stand_init_from_dataframe_multiple_matches_raises():
         FvsStandInit.from_dataframe(df, stand_id=stand_id)
 
 
-def test_result_serialize_mixed_types():
-    table_name = FvsOutputTableName.FVS_SUMMARY2
-    records = [{"CaseID": "test", "Year": 2020, "BA": 100.0}]
+# -------------------------------------------------------
+# FvsResult fvs_data coercion and serialization
+# -------------------------------------------------------
 
-    df_input = {table_name: pd.DataFrame(records)}
-    serialized = FvsResult.serialize_dict_of_dataframes(df_input)
-    assert serialized[table_name] == records
+_SUMMARY2_RECORDS = [
+    {"CaseID": "test", "Year": 2020, "BA": 100.0},
+    {"CaseID": "test", "Year": 2025, "BA": 110.0},
+]
+_TREELIST_RECORDS = [
+    {"CaseID": "test", "Year": 2020, "DBH": 8.0},
+]
 
-    list_input = {table_name: records}
-    passthrough = FvsResult.serialize_dict_of_dataframes(list_input)
-    assert passthrough[table_name] == records
+_FVS_RESULT_ATTRS = {
+    "name": "TEST_RESULT",
+    "fvs_variant": "CA",
+    "stand_id": "99999",
+    "treatment": "NONE",
+    "disturbance": "NONE",
+    "keyfile": "STDIDENT\n99999\nSTOP\n",
+    "command": "/usr/local/bin/FVSca --keywordfile=test.key",
+    "return_code": 0,
+    "stdout": None,
+    "stderr": None,
+    "outfile": "",
+    "fvs_data": {
+        FvsOutputTableName.FVS_SUMMARY2: _SUMMARY2_RECORDS,
+        FvsOutputTableName.FVS_TREELIST: _TREELIST_RECORDS,
+    },
+}
+
+
+def _make_fvs_result(**overrides) -> FvsResult:
+    attrs = dict(_FVS_RESULT_ATTRS)
+    attrs.update(overrides)
+    return FvsResult.model_validate(attrs)
+
+
+def test_fvs_data_coerces_records_to_dataframes():
+    result = _make_fvs_result()
+    assert isinstance(
+        result.fvs_data[FvsOutputTableName.FVS_SUMMARY2], pd.DataFrame
+    )
+    assert result.fvs_data[FvsOutputTableName.FVS_SUMMARY2].shape == (2, 3)
+    assert isinstance(
+        result.fvs_data[FvsOutputTableName.FVS_TREELIST], pd.DataFrame
+    )
+
+
+def test_fvs_data_serializes_dataframes_to_records():
+    result = _make_fvs_result()
+    dumped = result.model_dump()
+    summary = dumped["fvs_data"][FvsOutputTableName.FVS_SUMMARY2]
+    assert isinstance(summary, list)
+    assert isinstance(summary[0], dict)
+    assert summary == _SUMMARY2_RECORDS
+
+
+def test_table_names():
+    result = _make_fvs_result()
+    names = result.table_names
+    assert isinstance(names, list)
+    assert FvsOutputTableName.FVS_SUMMARY2 in names
+    assert FvsOutputTableName.FVS_TREELIST in names
+    assert len(names) == 2

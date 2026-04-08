@@ -16,6 +16,7 @@ from pydantic import (
     ConfigDict,
     Field,
     computed_field,
+    field_serializer,
     field_validator,
 )
 
@@ -636,7 +637,7 @@ class FvsResult(BaseModel):
             outfile
         fvs_warnings (list[dict] | None): warnings scraped from the FVS
             outfile
-        fvs_data (dict[FvsOutputTableName, list[dict]]): data scraped
+        fvs_data (dict[FvsOutputTableName, pd.DataFrame]): data scraped
             from the FVS output database
     """
 
@@ -651,13 +652,18 @@ class FvsResult(BaseModel):
     return_code: int
     stdout: str | None
     stderr: str | None
-    fvs_data: dict[FvsOutputTableName, list[dict]]
+    fvs_data: dict[FvsOutputTableName, pd.DataFrame]
     outfile: str
 
     @computed_field
     def fvs_warnings(self) -> list[FvsOutfileProblem] | None:
         """Warnings and errors parsed from the FVS outfile."""
         return FvsResult._parse_fvs_warnings_and_errors(self.outfile)
+
+    @property
+    def table_names(self) -> list[FvsOutputTableName]:
+        """Names of all FVS output tables available in this result."""
+        return list(self.fvs_data.keys())
 
     def __str__(self) -> str:
         report = (
@@ -691,9 +697,8 @@ class FvsResult(BaseModel):
             report += f"\tfvs_data: {self.fvs_data}\n"
         else:
             report += "\tfvs_data: {\n"
-            for name, records in self.fvs_data.items():
-                records_df = pd.DataFrame.from_records(records)
-                rows, cols = records_df.shape
+            for name, df in self.fvs_data.items():
+                rows, cols = df.shape
                 report += f"\t\t{name}: ({rows:,} rows, {cols} columns),\n"
             report += "\t}\n"
         report += ")"
@@ -701,18 +706,34 @@ class FvsResult(BaseModel):
         return report
 
     @field_validator("fvs_data", mode="before")
-    def serialize_dict_of_dataframes(
+    @classmethod
+    def coerce_records_to_dataframes(
         cls,
+        value: dict[FvsOutputTableName, list[dict] | pd.DataFrame],
+    ) -> dict[FvsOutputTableName, pd.DataFrame]:
+        """Coerces record lists to DataFrames on input.
+
+        This is intended to be used on the JSON deserialization path
+        (i.e., to create an FvsResult from a JSON response).
+        """
+        return {
+            key: pd.DataFrame.from_records(val)
+            if isinstance(val, list)
+            else val
+            for key, val in value.items()
+        }
+
+    @field_serializer("fvs_data")
+    def serialize_fvs_data(
+        self,
         value: dict[FvsOutputTableName, pd.DataFrame],
-    ) -> dict[FvsOutputTableName, list[dict]]:
-        """Converts dataframes into dictionary of records."""
-        result = {}
-        for key, val in value.items():
-            if isinstance(val, pd.DataFrame):
-                result[key] = val.to_dict(orient="records")
-            else:
-                result[key] = val
-        return result
+    ) -> dict[str, list[dict]]:
+        """Converts DataFrames to record lists for serialization.
+
+        Converts to serialized form for model_dump() and
+        model_dump_json().
+        """
+        return {key: df.to_dict(orient="records") for key, df in value.items()}
 
     @staticmethod
     def from_files(
