@@ -2,6 +2,7 @@ import subprocess
 
 import pandas as pd
 import pytest
+from pydantic import ValidationError
 
 from microfvs.constants import (
     DIAMETER_MAXIMUM,
@@ -434,6 +435,30 @@ def test_tree_init_to_dataframe_roundtrip():
         set(df_out.columns)
     )
     assert all(df_out["stand_id"] == stand_id)
+
+
+def test_tree_init_raises_on_multiple_stand_ids():
+    stand_a = dict(TEST_TREEINIT_RECORDS[0], stand_id="stand_a")
+    stand_b = dict(TEST_TREEINIT_RECORDS[0], stand_id="stand_b")
+    records = [
+        FvsTreeInitRecord.model_validate(stand_a),
+        FvsTreeInitRecord.model_validate(stand_b),
+    ]
+
+    with pytest.raises(ValidationError, match="single stand_id"):
+        FvsTreeInit(trees=records)
+
+
+def test_tree_init_stand_id_computed_field():
+    stand_id = TEST_STANDINIT_RECORDS[0]["stand_id"]
+    df = pd.DataFrame(TEST_TREEINIT_RECORDS)
+    tree_init = FvsTreeInit.from_dataframe(df, stand_id=stand_id)
+
+    assert tree_init.stand_id == stand_id
+
+
+def test_tree_init_stand_id_none_when_no_trees():
+    assert FvsTreeInit(trees=None).stand_id is None
 
 
 def test_stand_init_from_dataframe_happy_path():
