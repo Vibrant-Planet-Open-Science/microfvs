@@ -185,7 +185,7 @@ def test_fvskeyfile():
 
 
 # -------------------------------------------------------
-# Two-pass keyfile rendering order
+# FvsKeyfile validators and computed fields
 # -------------------------------------------------------
 
 
@@ -194,6 +194,49 @@ def _make_keyfile(**overrides) -> FvsKeyfile:
     defaults: dict = {"variant": FvsVariant.CA, "stand_id": "99999"}
     defaults.update(overrides)
     return FvsKeyfile(**defaults)
+
+
+def test_keyfile_standid_cast_from_int():
+    keyfile = _make_keyfile(stand_id=12345)
+    assert keyfile.stand_id == "12345"
+
+
+def test_keyfile_resolve_treatment_single_string():
+    keyfile = _make_keyfile(treatments="CMCC")
+    assert len(keyfile.treatments) == 1
+    assert keyfile.treatments[0].name == "CMCC"
+
+
+def test_keyfile_resolve_treatment_list_of_strings():
+    keyfile = _make_keyfile(treatments=["CMCC", "RMGP"])
+    assert len(keyfile.treatments) == 2
+    assert keyfile.treatments[0].name == "CMCC"
+    assert keyfile.treatments[1].name == "RMGP"
+
+
+def test_keyfile_resolve_treatment_mixed_list():
+    manual = FvsEvent(name="CUSTOM", content="KEYWORD")
+    keyfile = _make_keyfile(treatments=["CMCC", manual])
+    assert keyfile.treatments[0].name == "CMCC"
+    assert keyfile.treatments[1].name == "CUSTOM"
+
+
+def test_keyfile_resolve_disturbance_single_string():
+    keyfile = _make_keyfile(disturbances="FIC1")
+    assert len(keyfile.disturbances) == 1
+    assert keyfile.disturbances[0].name == "FIC1"
+
+
+def test_keyfile_treatment_name_joins_with_plus():
+    keyfile = _make_keyfile(treatments=["CMCC", "RMGP"])
+    assert keyfile.treatment_name == "CMCC+RMGP"
+
+
+def test_keyfile_disturbance_name_joins_with_plus():
+    d1 = FvsEvent(name="D1", content="X")
+    d2 = FvsEvent(name="D2", content="Y")
+    keyfile = _make_keyfile(disturbances=[d1, d2])
+    assert keyfile.disturbance_name == "D1+D2"
 
 
 def test_keyfile_default_when_no_events():
