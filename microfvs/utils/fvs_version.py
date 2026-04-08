@@ -1,5 +1,6 @@
 import os
 import subprocess
+import tempfile
 
 from microfvs.enums import FvsVariant
 
@@ -7,14 +8,16 @@ from microfvs.enums import FvsVariant
 def get_fvs_version(variant: FvsVariant) -> str:
     """Gets the version of FVS for a given variant."""
     if os.path.exists(f"/usr/local/bin/FVS{variant.lower()}"):
-        proc = subprocess.Popen(
-            f"/usr/local/bin/FVS{variant.lower()}",
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-        outs, _ = proc.communicate()
-        proc.kill()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            proc = subprocess.Popen(
+                f"/usr/local/bin/FVS{variant.lower()}",
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                cwd=temp_dir,
+            )
+            outs, _ = proc.communicate()
+            proc.kill()
         parsed_fvs_response = [
             x for x in outs.decode().strip().split(" ") if x.startswith("RV:")
         ]
