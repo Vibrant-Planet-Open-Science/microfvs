@@ -20,14 +20,17 @@ class FvsTemplateRenderError(Exception):
 
     def __init__(
         self,
-        message: str,
         template_variables: list[str],
         provided_variables: list[str],
         missing_required: list[str],
         missing_optional: list[str],
     ):
+        self.message = (
+            f"Template rendering failed: {missing_required} variables are required "
+            "but not provided."
+        )
         self.template_variables = template_variables
         self.provided_variables = provided_variables
         self.missing_required = missing_required
         self.missing_optional = missing_optional
-        super().__init__(message)
+        super().__init__(self.message)

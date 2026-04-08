@@ -44,6 +44,41 @@ def classify_template_variables(
     return sorted(required_names), sorted(truly_optional)
 
 
+def render_template(template: str, context: dict[str, str]) -> str:
+    """Render a Jinja2 template with strict undefined checking.
+
+    Uses ``StrictUndefined`` so that missing required variables
+    raise immediately.  When rendering fails, the error includes
+    all template variables classified as required vs optional.
+
+    Args:
+        template: Jinja2 template string.
+        context: Variable names and values to inject.
+
+    Returns:
+        The rendered template string.
+
+    Raises:
+        FvsTemplateRenderError: if the template references a
+            required variable not present in *context*.
+    """
+    required, optional = classify_template_variables(template)
+    provided_keys = set(context.keys())
+    missing_required = sorted(set(required) - provided_keys)
+    missing_optional = sorted(set(optional) - provided_keys)
+
+    env = Environment(undefined=StrictUndefined)
+    try:
+        return env.from_string(template).render(**context)
+    except UndefinedError as exc:
+        raise FvsTemplateRenderError(
+            template_variables=sorted(required + optional),
+            provided_variables=sorted(provided_keys),
+            missing_required=missing_required,
+            missing_optional=missing_optional,
+        ) from exc
+
+
 def _walk_ast(
     node: nodes.Node,
     inside_default: bool = False,
@@ -94,45 +129,3 @@ def _extract_defined_guard_names(test_node: nodes.Node) -> set[str]:
         if isinstance(test_node.node, nodes.Name):
             names.add(test_node.node.name)
     return names
-
-
-def render_template(template: str, context: dict[str, str]) -> str:
-    """Render a Jinja2 template with strict undefined checking.
-
-    Uses ``StrictUndefined`` so that missing required variables
-    raise immediately.  When rendering fails, the error includes
-    all template variables classified as required vs optional.
-
-    Args:
-        template: Jinja2 template string.
-        context: Variable names and values to inject.
-
-    Returns:
-        The rendered template string.
-
-    Raises:
-        FvsTemplateRenderError: if the template references a
-            required variable not present in *context*.
-    """
-    required, optional = classify_template_variables(template)
-    provided_keys = set(context.keys())
-    missing_required = sorted(set(required) - provided_keys)
-    missing_optional = sorted(set(optional) - provided_keys)
-
-    env = Environment(undefined=StrictUndefined)
-    try:
-        return env.from_string(template).render(**context)
-    except UndefinedError as exc:
-        raise FvsTemplateRenderError(
-            message=(
-                f"Template rendering failed: {exc}. "
-                f"Template variables: {sorted(required + optional)}. "
-                f"Provided: {sorted(provided_keys)}. "
-                f"Missing required: {missing_required}. "
-                f"Missing optional: {missing_optional}."
-            ),
-            template_variables=sorted(required + optional),
-            provided_variables=sorted(provided_keys),
-            missing_required=missing_required,
-            missing_optional=missing_optional,
-        ) from exc
