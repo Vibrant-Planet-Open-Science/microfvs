@@ -1,10 +1,6 @@
 import pytest
 
-from microfvs.enums import (
-    FvsEventType,
-    FvsKeyfileTemplate,
-    FvsVariant,
-)
+from microfvs.enums import FvsEventType, FvsKeyfileTemplate, FvsVariant
 from microfvs.models import FvsEvent, FvsEventLibrary
 from microfvs.utils.template_helpers import ClassifiedTemplateVariables
 
