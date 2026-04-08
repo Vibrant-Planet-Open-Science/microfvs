@@ -2,6 +2,7 @@ import pytest
 
 from microfvs.enums import FvsEventType, FvsKeyfileTemplate, FvsVariant
 from microfvs.models import FvsEvent, FvsEventLibrary
+from microfvs.utils.template_helpers import ClassifiedTemplateVariables
 
 # -------------------------------------------------------
 # FvsVariant
@@ -33,11 +34,23 @@ def test_default_template_loads():
     assert "STOP" in template.value
 
 
-def test_default_template_get_param_names():
-    names = FvsKeyfileTemplate.DEFAULT.get_param_names()
-    assert isinstance(names, list)
-    for expected in ("stand_id", "num_cycles", "cycle_length"):
-        assert expected in names
+def test_default_template_get_params():
+    params = FvsKeyfileTemplate.DEFAULT.get_template_params()
+    assert isinstance(params, ClassifiedTemplateVariables)
+    assert params.required == ["stand_id"]
+    for optional in [
+        "num_cycles",
+        "cycle_length",
+        "first_cycle_length",
+        "mortality_modifiers",
+        "sdimax",
+        "econ",
+        "growth_modifiers",
+        "volume",
+        "disturbance",
+        "treatment",
+    ]:
+        assert optional in params.optional
 
 
 # -------------------------------------------------------

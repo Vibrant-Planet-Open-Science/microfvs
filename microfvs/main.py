@@ -21,6 +21,10 @@ from microfvs.models import (
 )
 from microfvs.utils.fvs_version import get_fvs_versions
 from microfvs.utils.run_fvs import run_fvs
+from microfvs.utils.template_helpers import (
+    ClassifiedTemplateVariables,
+    classify_template_variables,
+)
 
 app = FastAPI()
 
@@ -63,10 +67,15 @@ def check_fvs_version() -> dict[str, str]:
     return get_fvs_versions()
 
 
-@app.get("/template", response_class=PlainTextResponse)
-def example_keyfile_template() -> str:
+@app.get("/template")
+def example_keyfile_template() -> dict[str, str | ClassifiedTemplateVariables]:
     """Return default template for simulating a single stand in FVS."""
-    return FvsKeyfileTemplate.DEFAULT
+    template = FvsKeyfileTemplate.DEFAULT
+    template_params = classify_template_variables(template)
+    return {
+        "template_params": template_params,
+        "template": template,
+    }
 
 
 @app.post("/keyfile", response_class=PlainTextResponse)

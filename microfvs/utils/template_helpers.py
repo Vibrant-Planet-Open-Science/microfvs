@@ -1,13 +1,35 @@
 from __future__ import annotations
 
 from jinja2 import Environment, StrictUndefined, UndefinedError, nodes
+from pydantic import BaseModel, ConfigDict
 
 from microfvs.exceptions import FvsTemplateRenderError
 
 
+class ClassifiedTemplateVariables(BaseModel):
+    """Classified template variables.
+
+    Attributes:
+        required (list[str]): List of required template variables.
+        optional (list[str]): List of optional template variables.
+    """
+
+    required: list[str]
+    optional: list[str]
+
+    model_config = ConfigDict(frozen=True)
+
+    def __str__(self) -> str:
+        return (
+            "Template variables:\n"
+            f"  Required: {self.required}\n"
+            f"  Optional: {self.optional}"
+        )
+
+
 def classify_template_variables(
     template: str,
-) -> tuple[list[str], list[str]]:
+) -> ClassifiedTemplateVariables:
     """Classify template variables as required or optional.
 
     Parses the Jinja2 AST and identifies two patterns that make a
@@ -41,7 +63,10 @@ def classify_template_variables(
             required_names.add(name)
 
     truly_optional = optional_names - required_names
-    return sorted(required_names), sorted(truly_optional)
+    return ClassifiedTemplateVariables(
+        required=sorted(required_names),
+        optional=sorted(truly_optional),
+    )
 
 
 def render_template(template: str, context: dict[str, str]) -> str:
@@ -62,7 +87,8 @@ def render_template(template: str, context: dict[str, str]) -> str:
         FvsTemplateRenderError: if the template references a
             required variable not present in *context*.
     """
-    required, optional = classify_template_variables(template)
+    classified = classify_template_variables(template)
+    required, optional = classified.required, classified.optional
     provided_keys = set(context.keys())
     missing_required = sorted(set(required) - provided_keys)
     missing_optional = sorted(set(optional) - provided_keys)

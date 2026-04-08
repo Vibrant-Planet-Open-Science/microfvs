@@ -1,8 +1,7 @@
 import importlib.resources
 from enum import StrEnum
 
-from jinja2 import Environment as Jinja2Environment
-from jinja2 import meta as jinja2_meta
+from microfvs.utils.template_helpers import classify_template_variables
 
 
 class FvsKeyfileTemplate(StrEnum):
@@ -14,11 +13,9 @@ class FvsKeyfileTemplate(StrEnum):
         .read_text()
     )
 
-    def get_param_names(self) -> list[str]:
+    def get_template_params(self) -> list[str]:
         """Get named parameters that can be injected into template."""
-        env = Jinja2Environment()
-        abstract_syntax_tree = env.parse(self.value)
-        return list(jinja2_meta.find_undeclared_variables(abstract_syntax_tree))
+        return classify_template_variables(self.value)
 
 
 class FvsEventType(StrEnum):
