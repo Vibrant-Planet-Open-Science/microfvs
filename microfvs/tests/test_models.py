@@ -50,7 +50,7 @@ TEST_TREEINIT = [
 def test_standid_as_int():
     stand_init = FvsStandInit(
         stand_id=12345,
-        variant=FvsVariant.INLAND_CALIFORNIA,
+        variant=FvsVariant.CA,
         inv_year=1990,
         basal_area_factor=0,
         inv_plot_size=1,
@@ -62,7 +62,7 @@ def test_standid_as_int():
 def test_keyfile_name():
     stand_init = FvsStandInit(
         stand_id=12345,
-        variant=FvsVariant.INLAND_CALIFORNIA,
+        variant=FvsVariant.CA,
         inv_year=1990,
         basal_area_factor=0,
         inv_plot_size=1,
@@ -76,7 +76,7 @@ def test_keyfile_name():
     )
     keyfile = FvsKeyfile(params=params)
     assert keyfile.name == (
-        f"{FvsVariant.INLAND_CALIFORNIA}_{12345}_"
+        f"{FvsVariant.CA}_{12345}_"
         f"{TEST_FVS_TREATMENT.name}_{TEST_FVS_DISTURBANCE.name}"
     )
 
@@ -107,7 +107,7 @@ def test_random_treelist(num_trees):
 def test_fvs_result(tmp_path):
     params = FvsKeyfileTemplateParams(
         stand_id="12345",
-        variant=FvsVariant.INLAND_CALIFORNIA,
+        variant=FvsVariant.CA,
         inv_year=1990,
         basal_area_factor=0,
         inv_plot_size=1,
