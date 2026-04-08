@@ -659,6 +659,50 @@ class FvsResult(BaseModel):
         """Warnings and errors parsed from the FVS outfile."""
         return FvsResult._parse_fvs_warnings_and_errors(self.outfile)
 
+    @property
+    def table_names(self) -> list[FvsOutputTableName]:
+        """Names of all FVS output tables available in this result."""
+        return list(self.fvs_data.keys())
+
+    def get_table(self, table_name: FvsOutputTableName | str) -> pd.DataFrame:
+        """Return a single FVS output table as a DataFrame.
+
+        Args:
+            table_name (FvsOutputTableName | str): name of the output
+                table to retrieve. Plain strings are coerced to
+                FvsOutputTableName. This is case-insensitive.
+
+        Returns:
+            pd.DataFrame: the requested table.
+
+        Raises:
+            KeyError: if the table is not present in this result, with
+                a message listing the available table names.
+        """
+        if isinstance(table_name, str):
+            # lookup is case-insensitive, also checks for fvs_ prefix
+            table_name = FvsOutputTableName(table_name)
+        if table_name not in self.fvs_data:
+            available = ", ".join(self.table_names)
+            msg = (
+                f"Table '{table_name}' not found in this result. "
+                f"Available tables: {available}"
+            )
+            raise KeyError(msg)
+        return pd.DataFrame.from_records(self.fvs_data[table_name])
+
+    def get_tables(self) -> dict[FvsOutputTableName, pd.DataFrame]:
+        """Return all FVS output tables as a dictionary of DataFrames.
+
+        Returns:
+            dict[FvsOutputTableName, pd.DataFrame]: mapping from table
+                name to its DataFrame representation.
+        """
+        return {
+            name: pd.DataFrame.from_records(records)
+            for name, records in self.fvs_data.items()
+        }
+
     def __str__(self) -> str:
         report = (
             "FvsResult(\n"
@@ -691,9 +735,9 @@ class FvsResult(BaseModel):
             report += f"\tfvs_data: {self.fvs_data}\n"
         else:
             report += "\tfvs_data: {\n"
-            for name, records in self.fvs_data.items():
-                records_df = pd.DataFrame.from_records(records)
-                rows, cols = records_df.shape
+            for name in self.fvs_data:
+                df = self.get_table(name)
+                rows, cols = df.shape
                 report += f"\t\t{name}: ({rows:,} rows, {cols} columns),\n"
             report += "\t}\n"
         report += ")"

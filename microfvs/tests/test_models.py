@@ -475,3 +475,94 @@ def test_result_serialize_mixed_types():
     list_input = {table_name: records}
     passthrough = FvsResult.serialize_dict_of_dataframes(list_input)
     assert passthrough[table_name] == records
+
+
+# -------------------------------------------------------
+# FvsResult DataFrame accessor helpers
+# -------------------------------------------------------
+
+_SUMMARY2_RECORDS = [
+    {"CaseID": "test", "Year": 2020, "BA": 100.0},
+    {"CaseID": "test", "Year": 2025, "BA": 110.0},
+]
+_TREELIST_RECORDS = [
+    {"CaseID": "test", "Year": 2020, "DBH": 8.0},
+]
+
+_FVS_RESULT_ATTRS = {
+    "name": "TEST_RESULT",
+    "fvs_variant": "CA",
+    "stand_id": "99999",
+    "treatment": "NONE",
+    "disturbance": "NONE",
+    "keyfile": "STDIDENT\n99999\nSTOP\n",
+    "command": "/usr/local/bin/FVSca --keywordfile=test.key",
+    "return_code": 0,
+    "stdout": None,
+    "stderr": None,
+    "outfile": "",
+    "fvs_data": {
+        FvsOutputTableName.FVS_SUMMARY2: _SUMMARY2_RECORDS,
+        FvsOutputTableName.FVS_TREELIST: _TREELIST_RECORDS,
+    },
+}
+
+
+def _make_fvs_result(**overrides) -> FvsResult:
+    attrs = dict(_FVS_RESULT_ATTRS)
+    attrs.update(overrides)
+    return FvsResult.model_validate(attrs)
+
+
+def test_table_names():
+    result = _make_fvs_result()
+    names = result.table_names
+    assert isinstance(names, list)
+    assert FvsOutputTableName.FVS_SUMMARY2 in names
+    assert FvsOutputTableName.FVS_TREELIST in names
+    assert len(names) == 2
+
+
+def test_get_table_with_enum():
+    result = _make_fvs_result()
+    df = result.get_table(FvsOutputTableName.FVS_SUMMARY2)
+    assert isinstance(df, pd.DataFrame)
+    assert df.shape == (2, 3)
+    assert list(df.columns) == ["CaseID", "Year", "BA"]
+
+
+def test_get_table_with_string():
+    result = _make_fvs_result()
+    df = result.get_table("fvs_summary2")
+    assert isinstance(df, pd.DataFrame)
+    assert df.shape == (2, 3)
+
+
+def test_get_table_with_string_case_insensitive():
+    result = _make_fvs_result()
+    df = result.get_table("FVS_SUMMARY2")
+    assert isinstance(df, pd.DataFrame)
+    assert df.shape == (2, 3)
+    assert list(df.columns) == ["CaseID", "Year", "BA"]
+
+
+def test_get_table_missing_key_raises():
+    result = _make_fvs_result()
+    with pytest.raises(KeyError, match="fvs_cases"):
+        result.get_table(FvsOutputTableName.FVS_CASES)
+
+
+def test_get_table_missing_key_lists_available_tables():
+    result = _make_fvs_result()
+    with pytest.raises(KeyError, match="fvs_summary2"):
+        result.get_table(FvsOutputTableName.FVS_CASES)
+
+
+def test_get_tables():
+    result = _make_fvs_result()
+    tables = result.get_tables()
+    assert isinstance(tables, dict)
+    assert set(tables.keys()) == set(result.table_names)
+    for _, df in tables.items():
+        assert isinstance(df, pd.DataFrame)
+        assert len(df) > 0

@@ -1,6 +1,11 @@
 import pytest
 
-from microfvs.enums import FvsEventType, FvsKeyfileTemplate, FvsVariant
+from microfvs.enums import (
+    FvsEventType,
+    FvsKeyfileTemplate,
+    FvsOutputTableName,
+    FvsVariant,
+)
 from microfvs.models import FvsEvent, FvsEventLibrary
 from microfvs.utils.template_helpers import ClassifiedTemplateVariables
 
@@ -119,3 +124,22 @@ def test_lookup_invalid_disturbance_key_raises(library):
 def test_lookup_invalid_event_type_raises(library):
     with pytest.raises(ValueError, match="not a recognized FvsEventType"):
         library.lookup(event_type="BOGUS", event_key="anything")
+
+
+# -------------------------------------------------------
+# FvsOutputTableName
+# -------------------------------------------------------
+
+
+def test_output_table_missing_lowercase():
+    standard_name = FvsOutputTableName("fvs_summary2")
+    non_lower_name = FvsOutputTableName("Fvs_Summary2")
+    assert standard_name == FvsOutputTableName.FVS_SUMMARY2
+    assert non_lower_name == FvsOutputTableName.FVS_SUMMARY2
+
+
+def test_output_table_missing_non_fvs_prefix():
+    standard_name = FvsOutputTableName("fvs_summary2")
+    non_fvs_prefix_name = FvsOutputTableName("summary2")
+    assert standard_name == FvsOutputTableName.FVS_SUMMARY2
+    assert non_fvs_prefix_name == FvsOutputTableName.FVS_SUMMARY2
