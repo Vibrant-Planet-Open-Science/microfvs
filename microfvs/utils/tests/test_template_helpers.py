@@ -3,6 +3,7 @@ import pytest
 from microfvs.enums import FvsKeyfileTemplate
 from microfvs.exceptions import FvsTemplateRenderError
 from microfvs.utils.template_helpers import (
+    ClassifiedTemplateVariables,
     classify_template_variables,
     render_template,
 )
@@ -15,25 +16,26 @@ from microfvs.utils.template_helpers import (
 def test_classify_bare_variables():
     """Variables without guards are required."""
     template = "{{ foo }}\n{{ bar }}"
-    required, optional = classify_template_variables(template)
-    assert required == ["bar", "foo"]
-    assert optional == []
+    result = classify_template_variables(template)
+    assert isinstance(result, ClassifiedTemplateVariables)
+    assert result.required == ["bar", "foo"]
+    assert result.optional == []
 
 
 def test_classify_default_filter():
     """Variables with | default() are optional."""
     template = '{{ foo | default("x") }}'
-    required, optional = classify_template_variables(template)
-    assert required == []
-    assert optional == ["foo"]
+    result = classify_template_variables(template)
+    assert result.required == []
+    assert result.optional == ["foo"]
 
 
 def test_classify_defined_guard():
     """Variables inside {% if var is defined %} are optional."""
     template = "{% if foo is defined %}{{ foo }}{% endif %}"
-    required, optional = classify_template_variables(template)
-    assert required == []
-    assert optional == ["foo"]
+    result = classify_template_variables(template)
+    assert result.required == []
+    assert result.optional == ["foo"]
 
 
 def test_classify_mixed():
@@ -43,36 +45,36 @@ def test_classify_mixed():
         '{{ defaulted | default("x") }}\n'
         "{% if guarded is defined %}{{ guarded }}{% endif %}"
     )
-    required, optional = classify_template_variables(template)
-    assert required == ["required_var"]
-    assert optional == ["defaulted", "guarded"]
+    result = classify_template_variables(template)
+    assert result.required == ["required_var"]
+    assert result.optional == ["defaulted", "guarded"]
 
 
 def test_classify_chained_filter():
     """A default filter chained with other filters is optional."""
     template = "{{ foo | default(0) | int }}"
-    required, optional = classify_template_variables(template)
-    assert required == []
-    assert optional == ["foo"]
+    result = classify_template_variables(template)
+    assert result.required == []
+    assert result.optional == ["foo"]
 
 
 def test_classify_variable_both_bare_and_defaulted():
     """A variable used bare anywhere is required."""
     template = '{{ foo | default("x") }}\n{{ foo }}'
-    required, optional = classify_template_variables(template)
-    assert required == ["foo"]
-    assert optional == []
+    result = classify_template_variables(template)
+    assert result.required == ["foo"]
+    assert result.optional == []
 
 
 def test_classify_default_keyfile_template():
     """Only stand_id is required in the default template."""
-    required, optional = classify_template_variables(FvsKeyfileTemplate.DEFAULT)
-    assert "stand_id" in required
-    assert "num_cycles" in optional
-    assert "cycle_length" in optional
-    assert "first_cycle_length" in optional
-    assert "treatment" in optional
-    assert "disturbance" in optional
+    result = classify_template_variables(FvsKeyfileTemplate.DEFAULT)
+    assert "stand_id" in result.required
+    assert "num_cycles" in result.optional
+    assert "cycle_length" in result.optional
+    assert "first_cycle_length" in result.optional
+    assert "treatment" in result.optional
+    assert "disturbance" in result.optional
 
 
 # -------------------------------------------------------
