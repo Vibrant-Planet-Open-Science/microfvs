@@ -34,7 +34,7 @@ def test_default_template_loads():
     assert "STOP" in template.value
 
 
-def test_default_template_get_param_names():
+def test_default_template_get_params():
     params = FvsKeyfileTemplate.DEFAULT.get_template_params()
     assert isinstance(params, ClassifiedTemplateVariables)
     assert params.required == ["stand_id"]
