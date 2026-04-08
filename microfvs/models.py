@@ -16,6 +16,7 @@ from pydantic import (
     ConfigDict,
     Field,
     computed_field,
+    field_serializer,
     field_validator,
 )
 
@@ -636,7 +637,7 @@ class FvsResult(BaseModel):
             outfile
         fvs_warnings (list[dict] | None): warnings scraped from the FVS
             outfile
-        fvs_data (dict[FvsOutputTableName, list[dict]]): data scraped
+        fvs_data (dict[FvsOutputTableName, pd.DataFrame]): data scraped
             from the FVS output database
     """
 
@@ -651,7 +652,7 @@ class FvsResult(BaseModel):
     return_code: int
     stdout: str | None
     stderr: str | None
-    fvs_data: dict[FvsOutputTableName, list[dict]]
+    fvs_data: dict[FvsOutputTableName, pd.DataFrame]
     outfile: str
 
     @computed_field
@@ -663,45 +664,6 @@ class FvsResult(BaseModel):
     def table_names(self) -> list[FvsOutputTableName]:
         """Names of all FVS output tables available in this result."""
         return list(self.fvs_data.keys())
-
-    def get_table(self, table_name: FvsOutputTableName | str) -> pd.DataFrame:
-        """Return a single FVS output table as a DataFrame.
-
-        Args:
-            table_name (FvsOutputTableName | str): name of the output
-                table to retrieve. Plain strings are coerced to
-                FvsOutputTableName. This is case-insensitive.
-
-        Returns:
-            pd.DataFrame: the requested table.
-
-        Raises:
-            KeyError: if the table is not present in this result, with
-                a message listing the available table names.
-        """
-        if isinstance(table_name, str):
-            # lookup is case-insensitive, also checks for fvs_ prefix
-            table_name = FvsOutputTableName(table_name)
-        if table_name not in self.fvs_data:
-            available = ", ".join(self.table_names)
-            msg = (
-                f"Table '{table_name}' not found in this result. "
-                f"Available tables: {available}"
-            )
-            raise KeyError(msg)
-        return pd.DataFrame.from_records(self.fvs_data[table_name])
-
-    def get_tables(self) -> dict[FvsOutputTableName, pd.DataFrame]:
-        """Return all FVS output tables as a dictionary of DataFrames.
-
-        Returns:
-            dict[FvsOutputTableName, pd.DataFrame]: mapping from table
-                name to its DataFrame representation.
-        """
-        return {
-            name: pd.DataFrame.from_records(records)
-            for name, records in self.fvs_data.items()
-        }
 
     def __str__(self) -> str:
         report = (
@@ -735,8 +697,7 @@ class FvsResult(BaseModel):
             report += f"\tfvs_data: {self.fvs_data}\n"
         else:
             report += "\tfvs_data: {\n"
-            for name in self.fvs_data:
-                df = self.get_table(name)
+            for name, df in self.fvs_data.items():
                 rows, cols = df.shape
                 report += f"\t\t{name}: ({rows:,} rows, {cols} columns),\n"
             report += "\t}\n"
@@ -745,18 +706,34 @@ class FvsResult(BaseModel):
         return report
 
     @field_validator("fvs_data", mode="before")
-    def serialize_dict_of_dataframes(
+    @classmethod
+    def coerce_records_to_dataframes(
         cls,
+        value: dict[FvsOutputTableName, list[dict] | pd.DataFrame],
+    ) -> dict[FvsOutputTableName, pd.DataFrame]:
+        """Coerces record lists to DataFrames on input.
+
+        This is intended to be used on the JSON deserialization path
+        (i.e., to create an FvsResult from a JSON response).
+        """
+        return {
+            key: pd.DataFrame.from_records(val)
+            if isinstance(val, list)
+            else val
+            for key, val in value.items()
+        }
+
+    @field_serializer("fvs_data")
+    def serialize_fvs_data(
+        self,
         value: dict[FvsOutputTableName, pd.DataFrame],
-    ) -> dict[FvsOutputTableName, list[dict]]:
-        """Converts dataframes into dictionary of records."""
-        result = {}
-        for key, val in value.items():
-            if isinstance(val, pd.DataFrame):
-                result[key] = val.to_dict(orient="records")
-            else:
-                result[key] = val
-        return result
+    ) -> dict[str, list[dict]]:
+        """Converts DataFrames to record lists for serialization.
+
+        Converts to serialized form for model_dump() and
+        model_dump_json().
+        """
+        return {key: df.to_dict(orient="records") for key, df in value.items()}
 
     @staticmethod
     def from_files(
