@@ -1,3 +1,4 @@
+import pandas as pd
 import pytest
 
 from microfvs.constants import TEST_STANDINIT_RECORDS, TEST_TREEINIT_RECORDS
@@ -65,9 +66,8 @@ def test_run_fvs():
         set(EXPECTED_POPULATED_TABLES)
     )
     for table in EXPECTED_POPULATED_TABLES:
-        assert isinstance(result.fvs_data[table], list)
+        assert isinstance(result.fvs_data[table], pd.DataFrame)
         assert len(result.fvs_data[table]) > 0
-        assert isinstance(result.fvs_data[table][0], dict)
 
 
 def test_run_fvs_warns_on_stand_id_mismatch():
