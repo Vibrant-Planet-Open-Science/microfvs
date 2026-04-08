@@ -12,7 +12,6 @@ from microfvs.models import (
     FvsEventLibrary,
     FvsEventType,
     FvsKeyfile,
-    FvsKeyfileTemplateParams,
     FvsResult,
     FvsStandInit,
     FvsStandStockParams,
@@ -53,37 +52,40 @@ def example_keyfile_template() -> str:
 
 @app.post("/keyfile", response_class=PlainTextResponse)
 def generate_keyfile_from_template(
+    variant: Annotated[
+        str,
+        Body(examples=[FvsVariant.PN.value]),
+    ],
+    stand_id: Annotated[
+        str,
+        Body(examples=["12345"]),
+    ],
     template: Annotated[
         str,
         Body(examples=[FvsKeyfileTemplate.DEFAULT]),
-    ],
-    params: Annotated[
-        FvsKeyfileTemplateParams,
-        Body(
-            examples=[
-                FvsKeyfileTemplateParams(
-                    variant=FvsVariant.PN.value,
-                    stand_id="12345",
-                    num_cycles=1,
-                    cycle_length=5,
-                )
-            ]
-        ),
-    ],
+    ] = FvsKeyfileTemplate.DEFAULT,
+    template_params: Annotated[
+        dict, Body(examples=[{"num_cycles": 1, "cycle_length": 5}])
+    ] = {},
 ) -> str:
     """Generates a FVS Keyfile with user-specified parameters.
 
     Args:
-        template (str): str containing jinja2 FVS Keyfile template
-        params (FvsKeyfileTemplateParams, optional): parameters to
-            inject into the keyfile template, parameter values will be
-            injected to parameter names found in the template.
+        variant (str): Regional FVS variant code.
+        stand_id (str): Stand identifier.
+        template (str): Jinja2 FVS keyfile template.
+        template_params (dict): Template variables to inject.
     """
-    return FvsKeyfile(template=template, params=params).content
+    return FvsKeyfile(
+        variant=variant,
+        stand_id=stand_id,
+        template=template,
+        template_params=template_params,
+    ).content
 
 
 @app.post("/run")
-def run_fvs_batch(
+def run_fvs_single_stand(
     stand_init: Annotated[
         FvsStandInit,
         Body(examples=[FvsStandInit.model_validate(TEST_STANDINIT_RECORDS[0])]),
@@ -92,54 +94,31 @@ def run_fvs_batch(
         FvsTreeInit,
         Body(examples=[FvsTreeInit.from_records(TEST_TREEINIT_RECORDS)]),
     ] = FvsTreeInit(),
-    limit: int = 1,
     template: Annotated[
         str, Body(examples=[FvsKeyfileTemplate.DEFAULT])
     ] = FvsKeyfileTemplate.DEFAULT,
     template_params: Annotated[
-        dict, Body(examples=[{"first_cycle_length": 3}])
+        dict, Body(examples=[{"num_cycles": 10, "cycle_length": 5}])
     ] = {},
     stand_stock_params: FvsStandStockParams = FvsStandStockParams(),
-) -> FvsResult | list[FvsResult]:
-    """Runs FVS and returns the results.
+) -> FvsResult:
+    """Runs FVS on a single stand and returns the results.
 
     Args:
-        stand_init (FvsStandInit): Stand initialization data for one or
-            more stands. All stands represented in stand_init will be
-            run in the order specified unless or until `limit` is
-            reached.
-        tree_init (FvsTreeInit, optional): Tree initialization data for
-            one or more stands. If not provided, bare ground will be
-            simulated.
-        limit (int, optional): batch size to which the number of
-            simulations will be capped.
-        treatments (list[FvsEvent], dict[str, list[FvsEvent]], optional):  # noqa: W505
-            Treatments to be simulated. If specified as a list of
-            FvsEvents, the same set of events will be applied to all
-            stands. Can be specified as a dict with keys referring to
-            stand_ids and dict values corresponding to a list of
-            treatments to apply for that stand. By default, no
-            treatments will be simulated for any stand.
-        disturbances (list[FvsEvent], dict[str, list[FvsEvent]], optional):
-            Disturbances to be simulated. If specified as a list of FvsEvents,
-            the same set of events will be applied to all stands. Can be
-            specified as a dict with keys referring to stand_ids and dict values
-            corresponding to a list of disturbances to apply for that stand. By
-            default, no disturbance will be simulated for any stand.
-        template (str, optional): FVS keyfile template to use. Defaults to
-            FvsKeyfileTemplate.DEFAULT
-        template_params (dict, optional):
-            Additional parameters to inject into the template
-        stand_stock_params (FvsStandStockParams): Optional set of parameters to
-            govern the generation of a Stand and Stock Table in the FVS
-            outputs. Default is to produce the Stand and Stock Table, and
-            to do so using DBH classes of 4 inches and a large diameter
-            category starting at 48 inches DBH.
-    """  # noqa: W505
+        stand_init (FvsStandInit): Stand initialization data.
+        tree_init (FvsTreeInit, optional): Tree initialization data.
+            If not provided, bare ground will be simulated.
+        template (str, optional): FVS keyfile template to use.
+        template_params (dict, optional): Template variables
+            (e.g. treatments, disturbances, num_cycles,
+            cycle_length, and custom placeholders). ``variant``
+            and ``stand_id`` are derived from ``stand_init``.
+        stand_stock_params (FvsStandStockParams): Controls
+            Stand-and-Stock table generation in FVS outputs.
+    """
     return run_fvs(
         stand_init=stand_init,
         tree_init=tree_init,
-        limit=limit,
         template=template,
         template_params=template_params,
         stand_stock_params=stand_stock_params,
@@ -160,14 +139,14 @@ def get_outfile(
         str, Body(examples=[FvsKeyfileTemplate.DEFAULT])
     ] = FvsKeyfileTemplate.DEFAULT,
     template_params: Annotated[
-        dict, Body(examples=[{"first_cycle_length": 3}])
+        dict, Body(examples=[{"num_cycles": 10, "cycle_length": 5}])
     ] = {},
     stand_stock_params: FvsStandStockParams = FvsStandStockParams(),
 ) -> str:
     """Runs FVS and returns the OUT file.
 
     If multiple stands are included in `stand_init`, only the outfile
-    from thefirst stand is returned.
+    from the first stand is returned.
 
     Args:
         stand_init (FvsStandInit): Stand initialization data for one or
@@ -177,34 +156,17 @@ def get_outfile(
         tree_init (FvsTreeInit, optional): Tree initialization data for
             one or more stands. If not provided, bare ground will be
             simulated.
-        treatments (list[FvsEvent], dict[str, list[FvsEvent]], optional):  # noqa: W505
-            Treatments to be simulated. If specified as a list of
-            FvsEvents, the same set of events will be applied to all
-            stands. Can be specified as a dict with keys referring to
-            stand_ids and dict values corresponding to a list of
-            treatments to apply for that stand. By default, no
-            treatments will be simulated for any stand.
-        disturbances (list[FvsEvent], dict[str, list[FvsEvent]], optional):  # noqa: W505
-            Disturbances to be simulated. If specified as a list of
-            FvsEvents, the same set of events will be applied to all
-            stands. Can be specified as a dict with keys referring to
-            stand_ids and dict values corresponding to a list of
-            disturbances to apply for that stand. By default, no
-            disturbance will be simulated for any stand.
-        template (str, optional): FVS keyfile template to use. Defaults to
-            FvsKeyfileTemplate.DEFAULT
-        template_params (dict, optional):
-            Additional parameters to inject into the template
-        stand_stock_params (FvsStandStockParams): Optional set of parameters to
-            govern the generation of a Stand and Stock Table in the FVS
-            outputs. Default is to produce the Stand and Stock Table, and
-            to do so using DBH classes of 4 inches and a large diameter
-            category starting at 48 inches DBH.
-    """  # noqa: W505
+        template (str, optional): FVS keyfile template to use. Defaults
+            to FvsKeyfileTemplate.DEFAULT
+        template_params (dict, optional): Parameters to inject into
+            the keyfile template. See ``/run`` for details.
+        stand_stock_params (FvsStandStockParams): Optional set of
+            parameters to govern the generation of a Stand and Stock
+            Table in the FVS outputs.
+    """
     result = run_fvs(
         stand_init=stand_init,
         tree_init=tree_init,
-        limit=1,
         template=template,
         template_params=template_params,
         stand_stock_params=stand_stock_params,

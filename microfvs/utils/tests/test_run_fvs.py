@@ -1,10 +1,11 @@
+import pytest
+
 from microfvs.constants import TEST_STANDINIT_RECORDS, TEST_TREEINIT_RECORDS
-from microfvs.enums import FvsOutputTableName
+from microfvs.enums import FvsOutputTableName, FvsVariant
 from microfvs.models import (
     FvsEventLibrary,
     FvsEventType,
     FvsKeyfile,
-    FvsKeyfileTemplateParams,
     FvsResult,
     FvsStandInit,
     FvsTreeInit,
@@ -28,27 +29,36 @@ TEST_TREATMENT = FvsEventLibrary().lookup(
 
 TEST_STANDINIT = FvsStandInit.model_validate(TEST_STANDINIT_RECORDS[0])
 TEST_TREEINIT = FvsTreeInit.from_records(TEST_TREEINIT_RECORDS)
+MISMATCHED_STANDINIT = FvsStandInit(
+    stand_id="NONEXISTENT",
+    variant=FvsVariant.CA,
+    inv_year=2016,
+    basal_area_factor=0,
+    inv_plot_size=1,
+    brk_dbh=999,
+)
 
 
 def test_run_fvs():
-    params = FvsKeyfileTemplateParams(
+    ref_keyfile = FvsKeyfile(
         variant=TEST_STANDINIT.variant,
         stand_id=TEST_STANDINIT.stand_id,
         treatments=[TEST_TREATMENT],
         disturbances=[TEST_DISTURBANCE],
     )
-    keyfile = FvsKeyfile(params=params)
 
     result = run_fvs(
         stand_init=TEST_STANDINIT,
         tree_init=TEST_TREEINIT,
-        treatments=[TEST_TREATMENT],
-        disturbances=[TEST_DISTURBANCE],
+        template_params={
+            "treatments": [TEST_TREATMENT],
+            "disturbances": [TEST_DISTURBANCE],
+        },
     )
 
     assert isinstance(result, FvsResult)
     assert result.return_code == 0
-    assert result.keyfile == keyfile.content
+    assert result.keyfile == ref_keyfile.content
     assert result.outfile is not None
     assert result.fvs_warnings is None
     assert set(result.fvs_data.keys()).issuperset(
@@ -58,3 +68,12 @@ def test_run_fvs():
         assert isinstance(result.fvs_data[table], list)
         assert len(result.fvs_data[table]) > 0
         assert isinstance(result.fvs_data[table][0], dict)
+
+
+def test_run_fvs_warns_on_stand_id_mismatch():
+    with pytest.warns(UserWarning, match="not found in tree_init"):
+        result = run_fvs(
+            stand_init=MISMATCHED_STANDINIT,
+            tree_init=TEST_TREEINIT,
+        )
+    assert isinstance(result, FvsResult)

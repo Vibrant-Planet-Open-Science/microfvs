@@ -125,102 +125,6 @@ class FvsEventLibrary:
         raise ValueError(msg)
 
 
-class FvsKeyfileTemplateParams(BaseModel):
-    """Parameters injected into Keyfile template for a simulation."""
-
-    variant: FvsVariant
-    stand_id: str
-    num_cycles: int = 1
-    cycle_length: int = 5
-    treatments: list[FvsEvent] = [
-        FvsEvent(name="NONE", content="*** NO TREATMENT ***")
-    ]
-    disturbances: list[FvsEvent] = [
-        FvsEvent(name="NONE", content="*** NO DISTURBANCE ***")
-    ]
-
-    model_config = ConfigDict(
-        extra="allow",
-        use_enum_values=True,
-    )
-
-    @computed_field
-    def treatment_name(self) -> str:
-        """A name for the treatment(s) to be simulated."""
-        return "+".join([t.name for t in self.treatments])
-
-    @computed_field
-    def disturbance_name(self) -> str:
-        """A name for the disturbances(s) to be simulated."""
-        return "+".join([d.name for d in self.disturbances])
-
-    @property
-    def expected_fields(self) -> dict:
-        """Fields expected (not required) to exist and their values.
-
-        These are injected into a keyfile in an initial step before
-        extra fields are injected.
-        """
-        return {
-            key: value
-            for key, value in self.model_dump().items()
-            if key not in self.model_extra
-        }
-
-    @property
-    def extra_fields(self) -> dict:
-        """Extra fields to be defined and their values.
-
-        These are injected into a keyfile after expected fields are
-        injected.
-        """
-        return self.model_extra
-
-    @field_validator("treatments", mode="before")
-    @classmethod
-    def check_treatment(
-        cls, value: str | FvsEvent | list[str] | list[FvsEvent]
-    ) -> list[FvsEvent] | None:
-        """Converts treatment(s) into list of FvsEvent."""
-        library = FvsEventLibrary()
-        if isinstance(value, str):
-            return [
-                library.lookup(
-                    event_type=FvsEventType.TREATMENT, event_key=value
-                )
-            ]
-        if isinstance(value, Sequence):
-            return [
-                library.lookup(event_type=FvsEventType.TREATMENT, event_key=v)
-                if isinstance(v, str)
-                else v
-                for v in value
-            ]
-        return [FvsEvent(name="GROW", content="*** No Treatment ***")]
-
-    @field_validator("disturbances", mode="before")
-    @classmethod
-    def check_disturbance(
-        cls, value: str | FvsEvent | list[str] | list[FvsEvent]
-    ) -> list[FvsEvent] | None:
-        """Converts disturbance(s) into list of FvsEvent."""
-        library = FvsEventLibrary()
-        if isinstance(value, str):
-            return [
-                library.lookup(
-                    event_type=FvsEventType.DISTURBANCE, event_key=value
-                )
-            ]
-        if isinstance(value, Sequence):
-            return [
-                library.lookup(event_type=FvsEventType.DISTURBANCE, event_key=v)
-                if isinstance(v, str)
-                else v
-                for v in value
-            ]
-        return [FvsEvent(name="UNDISTURBED", content="*** No Disturbance ***")]
-
-
 class FvsStandStockParams(BaseModel):
     """Params for Stand and Stock Tables when scraping FVS results."""
 
@@ -230,71 +134,122 @@ class FvsStandStockParams(BaseModel):
 
 
 class FvsKeyfile(BaseModel):
-    """A model documenting a keyfile for running FVS on a single stand.
+    """A model for constructing and rendering an FVS keyfile.
 
     Args:
-        template (str): Optional Jinja template for the FVS Keyfile,
-            defaults to FvsKeyfileTemplate.DEFAULT
-        params (FvsKeyfileTemplateParams): Parameters to be injected
-            into the keyfile template.
-
-    Computed Attributes:
-        name (str): concatenation of
-            {fvs_variant}_{stand_id}_{treatment_name}_{disturbance_name}.
-        stand_id (str): Stand identifier.
-        fvs_variant (FvsVariant): The regional variant of FVS.
-        content (str): the full text of the FVS Keyfile.
+        variant (FvsVariant): Regional FVS variant, used for binary
+            selection and keyfile naming.
+        stand_id (str): Stand identifier, rendered into the template.
+        treatments (list[FvsEvent]): Treatment events whose content
+            is injected into the keyfile. Accepts FvsEvent objects,
+            dicts, or string keys that are resolved via the event
+            library.
+        disturbances (list[FvsEvent]): Disturbance events. Same
+            coercion rules as treatments.
+        template (str): Jinja2 template for the keyfile.
+        template_params (dict): All other template variables
+            (e.g. num_cycles, cycle_length, custom placeholders).
     """
 
+    variant: FvsVariant
+    stand_id: str
+    treatments: list[FvsEvent] = [
+        FvsEvent(name="NONE", content="*** NO TREATMENT ***")
+    ]
+    disturbances: list[FvsEvent] = [
+        FvsEvent(name="NONE", content="*** NO DISTURBANCE ***")
+    ]
     template: str = FvsKeyfileTemplate.DEFAULT
-    params: FvsKeyfileTemplateParams
+    template_params: dict = {}
+
+    model_config = ConfigDict(use_enum_values=True)
+
+    @field_validator("stand_id", mode="before")
+    @classmethod
+    def _cast_stand_id(cls, raw: int | str) -> str:
+        return str(raw)
+
+    @field_validator("treatments", mode="before")
+    @classmethod
+    def _resolve_treatments(
+        cls, value: str | FvsEvent | list[str | FvsEvent]
+    ) -> list[FvsEvent]:
+        """Coerce string keys to FvsEvent via library lookup."""
+        return cls._resolve_events(value, FvsEventType.TREATMENT)
+
+    @field_validator("disturbances", mode="before")
+    @classmethod
+    def _resolve_disturbances(
+        cls, value: str | FvsEvent | list[str | FvsEvent]
+    ) -> list[FvsEvent]:
+        """Coerce string keys to FvsEvent via library lookup."""
+        return cls._resolve_events(value, FvsEventType.DISTURBANCE)
+
+    @staticmethod
+    def _resolve_events(
+        value: str | FvsEvent | list[str | FvsEvent],
+        event_type: FvsEventType,
+    ) -> list[FvsEvent]:
+        library = FvsEventLibrary()
+        if isinstance(value, str):
+            return [library.lookup(event_type=event_type, event_key=value)]
+        if isinstance(value, Sequence):
+            return [
+                library.lookup(event_type=event_type, event_key=v)
+                if isinstance(v, str)
+                else v
+                for v in value
+            ]
+        return []
 
     @computed_field
     def name(self) -> str:
-        """Name of FVS Keyfile."""
+        """Pattern: {variant}_{stand_id}_{treatments}_{disturbances}."""
         return "_".join(
             [
-                self.params.variant,
-                self.params.stand_id,
-                self.params.treatment_name,
-                self.params.disturbance_name,
+                self.variant,
+                self.stand_id,
+                self.treatment_name,
+                self.disturbance_name,
             ]
         )
 
     @computed_field
-    def stand_id(self) -> str:
-        """Stand ID for stand being run in Keyfile."""
-        return str(self.params.stand_id)
-
-    @computed_field
     def fvs_variant(self) -> str:
-        """Name of FVS Variant."""
-        return self.params.variant
+        """Regional FVS variant code."""
+        return self.variant
 
     @computed_field
     def treatment_name(self) -> str:
-        """Name of treatment(s) applied."""
-        return self.params.treatment_name
+        """Joined name of treatment(s)."""
+        return "+".join(t.name for t in self.treatments)
 
     @computed_field
     def disturbance_name(self) -> str:
-        """Name of disturbance(s) applied."""
-        return self.params.disturbance_name
+        """Joined name of disturbance(s)."""
+        return "+".join(d.name for d in self.disturbances)
 
     @computed_field
     def content(self) -> str:
-        """Content of the FVS Keyfile.
+        """Rendered keyfile text.
 
-        The template is rendered in two distinct steps. First, expected
-        fields are injected into the template. Second, any extra fields
-        are injected.This allows the content of expected fields to
-        include placeholders that are filled when the extra fields are
-        injected.
+        Pass 1 injects stand_id, treatment/disturbance content, and
+        all template_params into the template.  Pass 2 re-renders the
+        result with template_params so that placeholders embedded
+        inside treatment/disturbance content are resolved.
         """
-        rendered = Template(self.template).render(**self.params.expected_fields)
+        treatment = "\n".join(t.content for t in self.treatments)
+        disturbance = "\n".join(d.content for d in self.disturbances)
 
-        if len(self.params.extra_fields) > 0:
-            rendered = Template(rendered).render(**self.params.extra_fields)
+        rendered = Template(self.template).render(
+            stand_id=self.stand_id,
+            treatment=treatment,
+            disturbance=disturbance,
+            **self.template_params,
+        )
+
+        if self.template_params:
+            rendered = Template(rendered).render(**self.template_params)
 
         return rendered
 
@@ -396,15 +351,18 @@ class FvsTreeInit(BaseModel):
                 have this value in the column specified in `column_name`
             column_name (str): the name of the column to use for finding
                 the stand you want, usually "stand_id". Another common
-                option for folks using FIA data might be "stand_cn"
+                option for folks using FIA data might be "stand_cn". The
+                column name is case-insensitive.
         """
         tree_df = df.copy()
         tree_df.columns = [col.lower() for col in tree_df.columns]
+        column_name = column_name.lower()
 
         filtered = tree_df.loc[tree_df[column_name] == stand_id]
+
         if len(filtered) == 0:
             msg = (
-                f"No records found in {column_name} that match {stand_id}. "
+                f"No records found with {column_name}={stand_id}. "
                 f"Returning no trees."
             )
             warnings.warn(msg)
@@ -414,7 +372,12 @@ class FvsTreeInit(BaseModel):
 
     def to_dataframe(self) -> pd.DataFrame:
         """Returns FvsTreeInit as a Pandas DataFrame."""
-        return pd.DataFrame.from_records(self.model_dump()["trees"])
+        trees = self.model_dump().get("trees")
+        if trees is None:
+            return pd.DataFrame(
+                columns=list(FvsTreeInitRecord.model_fields.keys())
+            )
+        return pd.DataFrame.from_records(trees)
 
 
 class FvsStandInit(BaseModel):
@@ -542,6 +505,10 @@ class FvsStandInit(BaseModel):
             raise ValueError(msg)
 
         return FvsStandInit.model_validate(filtered.squeeze().to_dict())
+
+    def to_dataframe(self) -> pd.DataFrame:
+        """Returns FvsStandInit as a Pandas DataFrame."""
+        return pd.DataFrame.from_records([self.model_dump()])
 
 
 class FvsOutputTreeListRecord(BaseModel):
@@ -737,9 +704,13 @@ class FvsResult(BaseModel):
         value: dict[FvsOutputTableName, pd.DataFrame],
     ) -> dict[FvsOutputTableName, list[dict]]:
         """Converts dataframes into dictionary of records."""
-        return {
-            key: val.to_dict(orient="records") for key, val in value.items()
-        }
+        result = {}
+        for key, val in value.items():
+            if isinstance(val, pd.DataFrame):
+                result[key] = val.to_dict(orient="records")
+            else:
+                result[key] = val
+        return result
 
     @staticmethod
     def from_files(

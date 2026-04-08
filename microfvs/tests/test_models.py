@@ -1,5 +1,6 @@
 import subprocess
 
+import pandas as pd
 import pytest
 
 from microfvs.constants import (
@@ -16,13 +17,14 @@ from microfvs.constants import (
 )
 from microfvs.enums import FvsOutputTableName, FvsVariant
 from microfvs.models import (
+    FvsEvent,
     FvsEventLibrary,
     FvsEventType,
     FvsKeyfile,
-    FvsKeyfileTemplateParams,
     FvsOutputTreeListRecord,
     FvsResult,
     FvsStandInit,
+    FvsTreeInit,
     FvsTreeInitRecord,
 )
 
@@ -45,6 +47,8 @@ TEST_STANDINIT = FvsStandInit.model_validate(TEST_STANDINIT_RECORDS[0])
 TEST_TREEINIT = [
     FvsTreeInitRecord.model_validate(tree) for tree in TEST_TREEINIT_RECORDS
 ]
+NO_TREATMENT_MARKER = "*** NO TREATMENT ***"
+NO_DISTURBANCE_MARKER = "*** NO DISTURBANCE ***"
 
 
 def test_standid_as_int():
@@ -60,23 +64,14 @@ def test_standid_as_int():
 
 
 def test_keyfile_name():
-    stand_init = FvsStandInit(
-        stand_id=12345,
+    keyfile = FvsKeyfile(
         variant=FvsVariant.CA,
-        inv_year=1990,
-        basal_area_factor=0,
-        inv_plot_size=1,
-        brk_dbh=999,
-    )
-    params = FvsKeyfileTemplateParams(
-        variant=stand_init.variant,
-        stand_id=stand_init.stand_id,
+        stand_id="12345",
         treatments=[TEST_FVS_TREATMENT],
         disturbances=[TEST_FVS_DISTURBANCE],
     )
-    keyfile = FvsKeyfile(params=params)
     assert keyfile.name == (
-        f"{FvsVariant.CA}_{12345}_"
+        f"{FvsVariant.CA}_12345_"
         f"{TEST_FVS_TREATMENT.name}_{TEST_FVS_DISTURBANCE.name}"
     )
 
@@ -105,15 +100,11 @@ def test_random_treelist(num_trees):
 
 
 def test_fvs_result(tmp_path):
-    params = FvsKeyfileTemplateParams(
-        stand_id="12345",
+    keyfile = FvsKeyfile(
         variant=FvsVariant.CA,
-        inv_year=1990,
-        basal_area_factor=0,
-        inv_plot_size=1,
-        brk_dbh=999,
+        stand_id="12345",
+        template=RESULT_TESTING_KEYFILE_CONTENT,
     )
-    keyfile = FvsKeyfile(template=RESULT_TESTING_KEYFILE_CONTENT, params=params)
     keyfile_path = f"{tmp_path}/{keyfile.name}.key"
     with open(keyfile_path, "w") as f:
         f.write(keyfile.content)
@@ -174,13 +165,12 @@ def test_parse_fvs_warnings_errors():
 def test_fvskeyfile():
     stand_init = FvsStandInit.model_validate(TEST_STANDINIT_RECORDS[0])
 
-    params = FvsKeyfileTemplateParams(
+    keyfile = FvsKeyfile(
         variant=stand_init.variant,
         stand_id=stand_init.stand_id,
         treatments=[TEST_FVS_TREATMENT],
         disturbances=[TEST_FVS_DISTURBANCE],
     )
-    keyfile = FvsKeyfile(params=params)
 
     assert isinstance(keyfile, FvsKeyfile)
     assert keyfile.stand_id == stand_init.stand_id
@@ -191,3 +181,128 @@ def test_fvskeyfile():
     )
     assert keyfile.content.splitlines()[-2] == STR_PROCESS
     assert keyfile.content.splitlines()[-1] == STR_STOP
+
+
+# -------------------------------------------------------
+# Two-pass keyfile rendering order
+# -------------------------------------------------------
+
+
+def _make_keyfile(**overrides) -> FvsKeyfile:
+    """Helper to build a FvsKeyfile with sensible defaults."""
+    defaults: dict = {"variant": FvsVariant.CA, "stand_id": "99999"}
+    defaults.update(overrides)
+    return FvsKeyfile(**defaults)
+
+
+def test_keyfile_default_when_no_events():
+    keyfile = _make_keyfile()
+
+    assert NO_TREATMENT_MARKER in keyfile.content
+    assert NO_DISTURBANCE_MARKER in keyfile.content
+
+
+def test_keyfile_renders_treatment_content():
+    TREATMENT_MARKER = "THINDBH            0        60       200"
+    treatment = FvsEvent(name="MY_THIN", content=TREATMENT_MARKER)
+    keyfile = _make_keyfile(treatments=[treatment])
+
+    assert TREATMENT_MARKER in keyfile.content
+    assert NO_TREATMENT_MARKER not in keyfile.content
+
+
+def test_keyfile_renders_disturbance_content():
+    DISTURBANCE_MARKER = "SALVAGE            0       999"
+    disturbance = FvsEvent(name="MY_SALVAGE", content=DISTURBANCE_MARKER)
+    keyfile = _make_keyfile(disturbances=[disturbance])
+
+    assert DISTURBANCE_MARKER in keyfile.content
+    assert NO_DISTURBANCE_MARKER not in keyfile.content
+
+
+def test_keyfile_two_pass_rendering():
+    """Placeholders in treatment content are resolved."""
+    PLACEHOLDER = '{{"{:>10d}".format(thin_max_dbh)}}'
+    TREATMENT_WITH_PLACEHOLDER = f"THINDBH            0{PLACEHOLDER}       200"
+    INJECT_VALUE = 60
+    EXPECTED_TREATMENT_CONTENT = "THINDBH            0        60       200"
+    treatment = FvsEvent(
+        name="PARAM_THIN",
+        content=TREATMENT_WITH_PLACEHOLDER,
+    )
+    keyfile = _make_keyfile(
+        treatments=[treatment],
+        template_params={"thin_max_dbh": INJECT_VALUE},
+    )
+
+    assert PLACEHOLDER in TREATMENT_WITH_PLACEHOLDER
+    assert PLACEHOLDER not in keyfile.content
+    assert EXPECTED_TREATMENT_CONTENT in keyfile.content
+
+
+def test_keyfile_multiple_treatments_joined():
+    t1 = FvsEvent(name="T1", content="KEYWORD_A")
+    t2 = FvsEvent(name="T2", content="KEYWORD_B")
+    keyfile = _make_keyfile(treatments=[t1, t2])
+
+    assert "KEYWORD_A\nKEYWORD_B" in keyfile.content
+
+
+# -------------------------------------------------------
+# DataFrame methods
+# -------------------------------------------------------
+
+
+def test_tree_init_to_dataframe_none_trees():
+    tree_init = FvsTreeInit(trees=None)
+    df = tree_init.to_dataframe()
+
+    assert isinstance(df, pd.DataFrame)
+    assert len(df) == 0
+    expected_cols = set(FvsTreeInitRecord.model_fields.keys())
+    assert set(df.columns) == expected_cols
+
+
+def test_tree_init_from_dataframe_case_insensitive():
+    upper_records = [
+        {k.upper(): v for k, v in rec.items()} for rec in TEST_TREEINIT_RECORDS
+    ]
+    df = pd.DataFrame(upper_records)
+    stand_id = TEST_STANDINIT_RECORDS[0]["stand_id"]
+
+    tree_init = FvsTreeInit.from_dataframe(
+        df, stand_id=stand_id, column_name="STAND_ID"
+    )
+    assert tree_init.trees is not None
+    assert len(tree_init.trees) > 0
+
+
+def test_tree_init_from_dataframe_no_match_warns():
+    df = pd.DataFrame(TEST_TREEINIT_RECORDS)
+
+    with pytest.warns(UserWarning, match="No records found"):
+        tree_init = FvsTreeInit.from_dataframe(df, stand_id="NONEXISTENT")
+    assert tree_init.trees is None
+
+
+def test_stand_init_to_dataframe():
+    stand = FvsStandInit.model_validate(TEST_STANDINIT_RECORDS[0])
+    df = stand.to_dataframe()
+
+    assert isinstance(df, pd.DataFrame)
+    assert len(df) == 1
+    assert df.iloc[0]["stand_id"] == stand.stand_id
+    assert df.iloc[0]["variant"] == stand.variant
+
+
+def test_result_serialize_mixed_types():
+    table_name = FvsOutputTableName.FVS_SUMMARY2
+    records = [{"CaseID": "test", "Year": 2020, "BA": 100.0}]
+
+    df_input = {table_name: pd.DataFrame(records)}
+    serialized = FvsResult.serialize_dict_of_dataframes(df_input)
+    assert serialized[table_name] == records
+
+    list_input = {table_name: records}
+    passthrough = FvsResult.serialize_dict_of_dataframes(list_input)
+    assert passthrough[table_name] == records
