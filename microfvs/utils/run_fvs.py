@@ -85,6 +85,13 @@ def run_fvs(
         tree_data.to_sql("fvs_treeinit", conn, if_exists="replace", index=False)
 
         kw = dict(template_params)
+        reserved = FvsKeyfile.RESERVED_TEMPLATE_KEYS & kw.keys()
+        if reserved:
+            msg = (
+                f"template_params contains reserved key(s): {reserved}. "
+                "These are derived automatically and cannot be overridden."
+            )
+            raise ValueError(msg)
         treatments = kw.pop("treatments", None)
         disturbances = kw.pop("disturbances", None)
         keyfile_args: dict = {

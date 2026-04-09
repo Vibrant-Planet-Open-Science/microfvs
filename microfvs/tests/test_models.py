@@ -365,6 +365,36 @@ def test_second_pass_missing_variable_raises():
 
 
 # -------------------------------------------------------
+# Reserved template_params keys
+# -------------------------------------------------------
+
+
+def test_keyfile_rejects_reserved_stand_id_in_template_params():
+    with pytest.raises(ValidationError, match="reserved key"):
+        _make_keyfile(template_params={"stand_id": "evil"})
+
+
+def test_keyfile_rejects_reserved_treatment_in_template_params():
+    with pytest.raises(ValidationError, match="reserved key"):
+        _make_keyfile(template_params={"treatment": "evil"})
+
+
+def test_keyfile_rejects_reserved_variant_in_template_params():
+    with pytest.raises(ValidationError, match="reserved key"):
+        _make_keyfile(template_params={"variant": "SN"})
+
+
+def test_keyfile_rejects_reserved_disturbance_in_template_params():
+    with pytest.raises(ValidationError, match="reserved key"):
+        _make_keyfile(template_params={"disturbance": "evil"})
+
+
+def test_keyfile_allows_non_reserved_template_params():
+    keyfile = _make_keyfile(template_params={"num_cycles": 10})
+    assert keyfile.template_params == {"num_cycles": 10}
+
+
+# -------------------------------------------------------
 # DataFrame methods
 # -------------------------------------------------------
 

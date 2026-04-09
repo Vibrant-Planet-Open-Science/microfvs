@@ -49,6 +49,15 @@ jobs:
           pip install -r requirements.txt -r requirements-dev.txt
           pip install -e .
 
+      - name: Start MicroFVS service
+        run: |
+          uvicorn microfvs.main:app --host 0.0.0.0 --port 8000 &
+          timeout 30 bash -c '
+            until python -c "import requests; requests.get(\"http://localhost:8000/version\")" 2>/dev/null; do
+              sleep 1
+            done
+          '
+
       - name: Run nbval-lax on changed notebooks
         shell: bash
         env:

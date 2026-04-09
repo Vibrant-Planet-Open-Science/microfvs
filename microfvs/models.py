@@ -7,6 +7,7 @@ import warnings
 from collections.abc import Sequence
 from functools import cached_property
 from pathlib import Path
+from typing import ClassVar
 
 import numpy as np
 import pandas as pd
@@ -165,6 +166,28 @@ class FvsKeyfile(BaseModel):
     template_params: dict = {}
 
     model_config = ConfigDict(use_enum_values=True)
+
+    RESERVED_TEMPLATE_KEYS: ClassVar[frozenset[str]] = frozenset(
+        {
+            "variant",
+            "stand_id",
+            "treatment",
+            "disturbance",
+        }
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _reject_reserved_template_keys(cls, values: dict) -> dict:
+        tp = values.get("template_params", {})
+        collisions = cls.RESERVED_TEMPLATE_KEYS & tp.keys()
+        if collisions:
+            msg = (
+                f"template_params contains reserved key(s): {collisions}. "
+                "These are derived automatically and cannot be overridden."
+            )
+            raise ValueError(msg)
+        return values
 
     @field_validator("stand_id", mode="before")
     @classmethod

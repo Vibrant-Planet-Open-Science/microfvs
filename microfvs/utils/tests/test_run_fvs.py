@@ -70,6 +70,15 @@ def test_run_fvs():
         assert len(result.fvs_data[table]) > 0
 
 
+def test_run_fvs_rejects_reserved_template_params():
+    with pytest.raises(ValueError, match="reserved key"):
+        run_fvs(
+            stand_init=TEST_STANDINIT,
+            tree_init=TEST_TREEINIT,
+            template_params={"stand_id": "evil"},
+        )
+
+
 def test_run_fvs_warns_on_stand_id_mismatch():
     with pytest.warns(UserWarning, match="not found in tree_init"):
         result = run_fvs(
