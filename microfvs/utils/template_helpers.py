@@ -3,6 +3,7 @@ from __future__ import annotations
 from jinja2 import Environment, StrictUndefined, UndefinedError, nodes
 from pydantic import BaseModel, ConfigDict
 
+from microfvs.constants import INDENT
 from microfvs.exceptions import FvsTemplateRenderError
 
 
@@ -22,8 +23,8 @@ class ClassifiedTemplateVariables(BaseModel):
     def __str__(self) -> str:
         return (
             "Template variables:\n"
-            f"  Required: {self.required}\n"
-            f"  Optional: {self.optional}"
+            f"{INDENT}Required: {self.required}\n"
+            f"{INDENT}Optional: {self.optional}"
         )
 
 

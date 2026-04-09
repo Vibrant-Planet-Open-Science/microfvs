@@ -7,6 +7,7 @@ import warnings
 from collections.abc import Sequence
 from functools import cached_property
 from pathlib import Path
+from textwrap import indent
 from typing import ClassVar
 
 import numpy as np
@@ -34,6 +35,8 @@ from microfvs.constants import (
     GROWING_STOCK_THRESHOLD,
     HEIGHT_B1,
     HEIGHT_B2,
+    INDENT,
+    INDENT2,
     LINE_ENDING_STRING,
     LOG_LENGTH,
     MAX_MORTALITY_TREES_PER_ACRE,
@@ -61,6 +64,15 @@ class FvsEvent(BaseModel):
 
     name: str
     content: str
+
+    def __str__(self) -> str:
+        return (
+            f"FvsEvent(\n"
+            f"{INDENT}name: {self.name},\n"
+            f"{INDENT}content:\n"
+            f"{INDENT_block(self.content)}\n"
+            f")"
+        )
 
 
 class FvsEventLibrary:
@@ -279,6 +291,19 @@ class FvsKeyfile(BaseModel):
             rendered = render_template(rendered, self.template_params)
 
         return rendered
+
+    def __str__(self) -> str:
+        return (
+            f"FvsKeyfile(\n"
+            f"{INDENT}name: {self.name},\n"
+            f"{INDENT}variant: {self.variant},\n"
+            f"{INDENT}stand_id: {self.stand_id},\n"
+            f"{INDENT}treatment_name: {self.treatment_name},\n"
+            f"{INDENT}disturbance_name: {self.disturbance_name},\n"
+            f"{INDENT}content:\n"
+            f"{INDENT_block(self.content)}\n"
+            f")"
+        )
 
 
 class FvsTreeInitRecord(BaseModel):
@@ -715,44 +740,46 @@ class FvsResult(BaseModel):
         return list(self.fvs_data.keys())
 
     def __str__(self) -> str:
-        report = (
-            "FvsResult(\n"
-            f"\tname: {self.name},\n"
-            f"\tfvs_variant: {self.fvs_variant},\n"
-            f"\tstand_id: {self.stand_id},\n"
-            f"\ttreatment: {self.treatment},\n"
-            f"\tdisturbance: {self.disturbance},\n"
-            f"\tcommand: {self.command},\n"
-            f"\treturn_code: {self.return_code},\n"
-            f"\tstdout: {self.stdout},\n"
-        )
+        lines = [
+            "FvsResult(",
+            f"{INDENT}name: {self.name},",
+            f"{INDENT}fvs_variant: {self.fvs_variant},",
+            f"{INDENT}stand_id: {self.stand_id},",
+            f"{INDENT}treatment: {self.treatment},",
+            f"{INDENT}disturbance: {self.disturbance},",
+            f"{INDENT}command: {self.command},",
+            f"{INDENT}return_code: {self.return_code},",
+            f"{INDENT}stdout: {self.stdout},",
+        ]
+
         if self.stderr is None:
-            report += f"\tstderr: {self.stderr},\n"
+            lines.append(f"{INDENT}stderr: {self.stderr},")
         else:
-            lines = self.stderr.splitlines()
-            report += "\tstderr:\n"
-            for line in lines:
-                report += f"\t\t{line}\n"
+            lines.append(f"{INDENT}stderr:")
+            lines.extend(
+                f"{INDENT2}{line}" for line in self.stderr.splitlines()
+            )
 
         if self.fvs_warnings is None:
-            report += f"\tfvs_warnings: {self.fvs_warnings},\n"
+            lines.append(f"{INDENT}fvs_warnings: {self.fvs_warnings},")
         else:
-            report += "\tfvs_warnings: [\n"
-            for msg in self.fvs_warnings:
-                report += f"\t\t{msg},\n"
-            report += "\t]\n"
+            lines.append(f"{INDENT}fvs_warnings: [")
+            lines.extend(f"{INDENT2}{msg}," for msg in self.fvs_warnings)
+            lines.append(f"{INDENT}]")
 
         if self.fvs_data is None:
-            report += f"\tfvs_data: {self.fvs_data}\n"
+            lines.append(f"{INDENT}fvs_data: {self.fvs_data}")
         else:
-            report += "\tfvs_data: {\n"
+            lines.append(f"{INDENT}fvs_data: {{")
             for name, df in self.fvs_data.items():
                 rows, cols = df.shape
-                report += f"\t\t{name}: ({rows:,} rows, {cols} columns),\n"
-            report += "\t}\n"
-        report += ")"
+                lines.append(
+                    f"{INDENT2}{name}: ({rows:,} rows, {cols} columns),"
+                )
+            lines.append(f"{INDENT}}}")
 
-        return report
+        lines.append(")")
+        return "\n".join(lines)
 
     @field_validator("fvs_data", mode="before")
     @classmethod
@@ -929,3 +956,8 @@ class FvsOutfileProblem(BaseModel):
     type: str
     id: str | None
     message: str | None
+
+
+def INDENT_block(text: str) -> str:
+    """Indent a multi-line string by two levels."""
+    return indent(text.strip(), INDENT2)
