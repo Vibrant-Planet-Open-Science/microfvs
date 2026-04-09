@@ -53,7 +53,7 @@ jobs:
         run: |
           uvicorn microfvs.main:app --host 0.0.0.0 --port 8000 &
           timeout 30 bash -c '
-            until curl -sf http://localhost:8000/version > /dev/null; do
+            until wget -q --spider http://localhost:8000/version 2>/dev/null; do
               sleep 1
             done
           '
