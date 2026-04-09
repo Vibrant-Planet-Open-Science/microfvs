@@ -49,14 +49,6 @@ jobs:
           pip install -r requirements.txt -r requirements-dev.txt
           pip install -e .
 
-      - name: Start MicroFVS service
-        run: |
-          uvicorn microfvs.main:app --host 0.0.0.0 --port 8000 &
-          timeout 30 bash -c '
-            until wget -q --spider http://localhost:8000/version 2>/dev/null; do
-              sleep 1
-            done
-          '
       - name: Run nbval-lax on changed notebooks
         shell: bash
         env:
@@ -64,6 +56,12 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
+
+          uvicorn microfvs.main:app --host 0.0.0.0 --port 8000 &
+          for i in $(seq 30); do
+            wget -q --spider http://localhost:8000/version 2>/dev/null && break
+            sleep 1
+          done
 
           mapfile -d '' -t notebooks < <(
             git diff -z --name-only --diff-filter=AM "${BASE_SHA}...${HEAD_SHA}" -- '*.ipynb'
