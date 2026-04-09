@@ -18,6 +18,7 @@ from pydantic import (
     computed_field,
     field_serializer,
     field_validator,
+    model_validator,
 )
 
 from microfvs.constants import (
@@ -328,6 +329,31 @@ class FvsTreeInit(BaseModel):
     """Collection of tree records."""
 
     trees: list[FvsTreeInitRecord] | None = None
+
+    @computed_field
+    def stand_id(self) -> str | None:
+        """The stand ID shared by all tree records, or None if empty.
+
+        This is guaranteed to be the same for all tree records by
+        the model_validator _single_stand_id().
+        """
+        if not self.trees:
+            return None
+        return self.trees[0].stand_id
+
+    @model_validator(mode="after")
+    def _single_stand_id(self) -> FvsTreeInit:
+        """Ensures all tree records belong to the same stand."""
+        if not self.trees:
+            return self
+        stand_ids = {t.stand_id for t in self.trees}
+        if len(stand_ids) > 1:
+            msg = (
+                f"FvsTreeInit may only contain records for a single stand_id, "
+                f"but found {len(stand_ids)}: {sorted(stand_ids)}"
+            )
+            raise ValueError(msg)
+        return self
 
     @staticmethod
     def from_records(records: list[dict] | None) -> FvsTreeInit:
