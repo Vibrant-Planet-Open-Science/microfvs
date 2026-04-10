@@ -1,5 +1,12 @@
 CONTENT_TYPE = "Content-Type"
 EMPTY_STRING = ""
+EXAMPLE_DISTURBANCE_EVENT = {
+    "name": "undisturbed",
+    "content": "*** NO DISTURBANCE",
+}
+EXAMPLE_DISTURBANCE_STR = "FIC1"
+EXAMPLE_TREATMENT_EVENT = {"name": "unmanaged", "content": "*** NO MANAGEMENT"}
+EXAMPLE_TREATMENT_STR = "CMCC"
 FVS_DATABASE_NAME = "FVS_Data.db"
 FVS_VARIANT_COLUMN_NAME = "variant"
 INDENT = "    "

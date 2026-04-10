@@ -6,10 +6,18 @@ from typing import Annotated
 from fastapi import Body, FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 
-from microfvs.constants import TEST_STANDINIT_RECORDS, TEST_TREEINIT_RECORDS
+from microfvs.constants import (
+    EXAMPLE_DISTURBANCE_EVENT,
+    EXAMPLE_DISTURBANCE_STR,
+    EXAMPLE_TREATMENT_EVENT,
+    EXAMPLE_TREATMENT_STR,
+    TEST_STANDINIT_RECORDS,
+    TEST_TREEINIT_RECORDS,
+)
 from microfvs.enums import FvsKeyfileTemplate
 from microfvs.exceptions import FvsTemplateRenderError
 from microfvs.models import (
+    FvsEvent,
     FvsEventLibrary,
     FvsEventType,
     FvsKeyfile,
@@ -95,6 +103,24 @@ def generate_keyfile_from_template(
     template_params: Annotated[
         dict, Body(examples=[{"num_cycles": 1, "cycle_length": 5}])
     ] = {},
+    treatments: Annotated[
+        list[str | FvsEvent] | None,
+        Body(
+            examples=[
+                [EXAMPLE_TREATMENT_STR],
+                [FvsEvent.model_validate(EXAMPLE_TREATMENT_EVENT)],
+            ]
+        ),
+    ] = None,
+    disturbances: Annotated[
+        list[str | FvsEvent] | None,
+        Body(
+            examples=[
+                [EXAMPLE_DISTURBANCE_STR],
+                [FvsEvent.model_validate(EXAMPLE_DISTURBANCE_EVENT)],
+            ]
+        ),
+    ] = None,
 ) -> str:
     """Generates a FVS Keyfile with user-specified parameters.
 
@@ -102,13 +128,21 @@ def generate_keyfile_from_template(
         variant (str): Regional FVS variant code.
         stand_id (str): Stand identifier.
         template (str): Jinja2 FVS keyfile template.
-        template_params (dict): Template variables to inject.
+        template_params (dict): Template variables to inject
+            (e.g. num_cycles, cycle_length, custom placeholders).
+        treatments (list[str | FvsEvent], optional): Treatment
+            events to inject. Accepts string keys resolved via the
+            event library, or explicit FvsEvent objects.
+        disturbances (list[str | FvsEvent], optional): Disturbance
+            events to inject. Same coercion rules as treatments.
     """
     return FvsKeyfile(
         variant=variant,
         stand_id=stand_id,
         template=template,
         template_params=template_params,
+        treatments=treatments,
+        disturbances=disturbances,
     ).content
 
 
@@ -128,6 +162,24 @@ def run_fvs_single_stand(
     template_params: Annotated[
         dict, Body(examples=[{"num_cycles": 10, "cycle_length": 5}])
     ] = {},
+    treatments: Annotated[
+        list[str | FvsEvent] | None,
+        Body(
+            examples=[
+                [EXAMPLE_TREATMENT_STR],
+                FvsEvent.model_validate(EXAMPLE_TREATMENT_EVENT),
+            ]
+        ),
+    ] = None,
+    disturbances: Annotated[
+        list[str | FvsEvent] | None,
+        Body(
+            examples=[
+                [EXAMPLE_DISTURBANCE_STR],
+                [FvsEvent.model_validate(EXAMPLE_DISTURBANCE_EVENT)],
+            ]
+        ),
+    ] = None,
     stand_stock_params: FvsStandStockParams = FvsStandStockParams(),
 ) -> FvsResult:
     """Runs FVS on a single stand and returns the results.
@@ -138,9 +190,16 @@ def run_fvs_single_stand(
             If not provided, bare ground will be simulated.
         template (str, optional): FVS keyfile template to use.
         template_params (dict, optional): Template variables
-            (e.g. treatments, disturbances, num_cycles,
-            cycle_length, and custom placeholders). ``variant``
-            and ``stand_id`` are derived from ``stand_init``.
+            (e.g. num_cycles, cycle_length, custom placeholders).
+            ``variant`` and ``stand_id`` are derived from
+            ``stand_init``.
+        treatments (list[str | FvsEvent], optional): Treatment
+            events to inject into the keyfile. Accepts string keys
+            resolved via the event library, or explicit FvsEvent
+            objects.
+        disturbances (list[str | FvsEvent], optional): Disturbance
+            events to inject into the keyfile. Same coercion rules
+            as treatments.
         stand_stock_params (FvsStandStockParams): Controls
             Stand-and-Stock table generation in FVS outputs.
     """
@@ -149,6 +208,8 @@ def run_fvs_single_stand(
         tree_init=tree_init,
         template=template,
         template_params=template_params,
+        treatments=treatments,
+        disturbances=disturbances,
         stand_stock_params=stand_stock_params,
     )
 
@@ -169,6 +230,24 @@ def get_outfile(
     template_params: Annotated[
         dict, Body(examples=[{"num_cycles": 10, "cycle_length": 5}])
     ] = {},
+    treatments: Annotated[
+        list[str | FvsEvent] | None,
+        Body(
+            examples=[
+                [EXAMPLE_TREATMENT_STR],
+                [FvsEvent.model_validate(EXAMPLE_TREATMENT_EVENT)],
+            ]
+        ),
+    ] = None,
+    disturbances: Annotated[
+        list[str | FvsEvent] | None,
+        Body(
+            examples=[
+                [EXAMPLE_DISTURBANCE_STR],
+                [FvsEvent.model_validate(EXAMPLE_DISTURBANCE_EVENT)],
+            ]
+        ),
+    ] = None,
     stand_stock_params: FvsStandStockParams = FvsStandStockParams(),
 ) -> str:
     """Runs FVS and returns the OUT file.
@@ -186,8 +265,15 @@ def get_outfile(
             simulated.
         template (str, optional): FVS keyfile template to use. Defaults
             to FvsKeyfileTemplate.DEFAULT
-        template_params (dict, optional): Parameters to inject into
-            the keyfile template. See ``/run`` for details.
+        template_params (dict, optional): Template variables to inject
+            (e.g. num_cycles, cycle_length, custom placeholders).
+        treatments (list[str | FvsEvent], optional): Treatment
+            events to inject into the keyfile. Accepts string keys
+            resolved via the event library, or explicit FvsEvent
+            objects.
+        disturbances (list[str | FvsEvent], optional): Disturbance
+            events to inject into the keyfile. Same coercion rules
+            as treatments.
         stand_stock_params (FvsStandStockParams): Optional set of
             parameters to govern the generation of a Stand and Stock
             Table in the FVS outputs.
@@ -197,6 +283,8 @@ def get_outfile(
         tree_init=tree_init,
         template=template,
         template_params=template_params,
+        treatments=treatments,
+        disturbances=disturbances,
         stand_stock_params=stand_stock_params,
     )
     return (

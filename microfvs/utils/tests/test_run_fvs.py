@@ -1,5 +1,6 @@
 import pandas as pd
 import pytest
+from pydantic import ValidationError
 
 from microfvs.constants import TEST_STANDINIT_RECORDS, TEST_TREEINIT_RECORDS
 from microfvs.enums import FvsOutputTableName, FvsVariant
@@ -51,10 +52,8 @@ def test_run_fvs():
     result = run_fvs(
         stand_init=TEST_STANDINIT,
         tree_init=TEST_TREEINIT,
-        template_params={
-            "treatments": [TEST_TREATMENT],
-            "disturbances": [TEST_DISTURBANCE],
-        },
+        treatments=[TEST_TREATMENT],
+        disturbances=[TEST_DISTURBANCE],
     )
 
     assert isinstance(result, FvsResult)
@@ -71,11 +70,29 @@ def test_run_fvs():
 
 
 def test_run_fvs_rejects_reserved_template_params():
-    with pytest.raises(ValueError, match="reserved key"):
+    with pytest.raises(ValidationError, match="reserved key"):
         run_fvs(
             stand_init=TEST_STANDINIT,
             tree_init=TEST_TREEINIT,
             template_params={"stand_id": "evil"},
+        )
+
+
+def test_run_fvs_rejects_treatments_in_template_params():
+    with pytest.raises(ValidationError, match="reserved key"):
+        run_fvs(
+            stand_init=TEST_STANDINIT,
+            tree_init=TEST_TREEINIT,
+            template_params={"treatments": [TEST_TREATMENT]},
+        )
+
+
+def test_run_fvs_rejects_disturbances_in_template_params():
+    with pytest.raises(ValidationError, match="reserved key"):
+        run_fvs(
+            stand_init=TEST_STANDINIT,
+            tree_init=TEST_TREEINIT,
+            template_params={"disturbances": [TEST_DISTURBANCE]},
         )
 
 

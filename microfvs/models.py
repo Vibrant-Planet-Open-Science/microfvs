@@ -70,7 +70,7 @@ class FvsEvent(BaseModel):
             f"FvsEvent(\n"
             f"{INDENT}name: {self.name},\n"
             f"{INDENT}content:\n"
-            f"{INDENT_block(self.content)}\n"
+            f"{_indent_block(self.content)}\n"
             f")"
         )
 
@@ -155,12 +155,13 @@ class FvsKeyfile(BaseModel):
         variant (FvsVariant): Regional FVS variant, used for binary
             selection and keyfile naming.
         stand_id (str): Stand identifier, rendered into the template.
-        treatments (list[FvsEvent]): Treatment events whose content
-            is injected into the keyfile. Accepts FvsEvent objects,
-            dicts, or string keys that are resolved via the event
-            library.
-        disturbances (list[FvsEvent]): Disturbance events. Same
-            coercion rules as treatments.
+        treatments (list[FvsEvent] | None): Treatment events whose
+            content is injected into the keyfile. Accepts FvsEvent
+            objects, dicts, or string keys that are resolved via the
+            event library. None means no treatments (grow-only).
+        disturbances (list[FvsEvent] | None): Disturbance events.
+            Same coercion rules as treatments. None means no
+            disturbances.
         template (str): Jinja2 template for the keyfile.
         template_params (dict): All other template variables
             (e.g. num_cycles, cycle_length, custom placeholders).
@@ -168,12 +169,8 @@ class FvsKeyfile(BaseModel):
 
     variant: FvsVariant
     stand_id: str
-    treatments: list[FvsEvent] = [
-        FvsEvent(name="NONE", content="*** NO TREATMENT ***")
-    ]
-    disturbances: list[FvsEvent] = [
-        FvsEvent(name="NONE", content="*** NO DISTURBANCE ***")
-    ]
+    treatments: list[FvsEvent] | None = None
+    disturbances: list[FvsEvent] | None = None
     template: str = FvsKeyfileTemplate.DEFAULT
     template_params: dict = {}
 
@@ -185,6 +182,8 @@ class FvsKeyfile(BaseModel):
             "stand_id",
             "treatment",
             "disturbance",
+            "treatments",
+            "disturbances",
         }
     )
 
@@ -209,17 +208,21 @@ class FvsKeyfile(BaseModel):
     @field_validator("treatments", mode="before")
     @classmethod
     def _resolve_treatments(
-        cls, value: str | FvsEvent | list[str | FvsEvent]
-    ) -> list[FvsEvent]:
+        cls, value: str | FvsEvent | list[str | FvsEvent] | None
+    ) -> list[FvsEvent] | None:
         """Coerce string keys to FvsEvent via library lookup."""
+        if value is None:
+            return None
         return cls._resolve_events(value, FvsEventType.TREATMENT)
 
     @field_validator("disturbances", mode="before")
     @classmethod
     def _resolve_disturbances(
-        cls, value: str | FvsEvent | list[str | FvsEvent]
-    ) -> list[FvsEvent]:
+        cls, value: str | FvsEvent | list[str | FvsEvent] | None
+    ) -> list[FvsEvent] | None:
         """Coerce string keys to FvsEvent via library lookup."""
+        if value is None:
+            return None
         return cls._resolve_events(value, FvsEventType.DISTURBANCE)
 
     @staticmethod
@@ -258,12 +261,16 @@ class FvsKeyfile(BaseModel):
 
     @computed_field
     def treatment_name(self) -> str:
-        """Joined name of treatment(s)."""
+        """Joined name of treatment(s), or 'NONE' when unset."""
+        if not self.treatments:
+            return "NONE"
         return "+".join(t.name for t in self.treatments)
 
     @computed_field
     def disturbance_name(self) -> str:
-        """Joined name of disturbance(s)."""
+        """Joined name of disturbance(s), or 'NONE' when unset."""
+        if not self.disturbances:
+            return "NONE"
         return "+".join(d.name for d in self.disturbances)
 
     @computed_field
@@ -275,15 +282,16 @@ class FvsKeyfile(BaseModel):
         result with template_params so that placeholders embedded
         inside treatment/disturbance content are resolved.
         """
-        treatment = "\n".join(t.content for t in self.treatments)
-        disturbance = "\n".join(d.content for d in self.disturbances)
-
-        context = {
+        context: dict = {
             "stand_id": self.stand_id,
-            "treatment": treatment,
-            "disturbance": disturbance,
             **self.template_params,
         }
+        if self.treatments:
+            context["treatment"] = "\n".join(t.content for t in self.treatments)
+        if self.disturbances:
+            context["disturbance"] = "\n".join(
+                d.content for d in self.disturbances
+            )
 
         rendered = render_template(self.template, context)
 
@@ -301,7 +309,7 @@ class FvsKeyfile(BaseModel):
             f"{INDENT}treatment_name: {self.treatment_name},\n"
             f"{INDENT}disturbance_name: {self.disturbance_name},\n"
             f"{INDENT}content:\n"
-            f"{INDENT_block(self.content)}\n"
+            f"{_indent_block(self.content)}\n"
             f")"
         )
 
@@ -958,6 +966,6 @@ class FvsOutfileProblem(BaseModel):
     message: str | None
 
 
-def INDENT_block(text: str) -> str:
+def _indent_block(text: str) -> str:
     """Indent a multi-line string by two levels."""
     return indent(text.strip(), INDENT2)
