@@ -49,8 +49,8 @@ TEST_STANDINIT = FvsStandInit.model_validate(TEST_STANDINIT_RECORDS[0])
 TEST_TREEINIT = [
     FvsTreeInitRecord.model_validate(tree) for tree in TEST_TREEINIT_RECORDS
 ]
-NO_TREATMENT_MARKER = "*** NO TREATMENT ***"
-NO_DISTURBANCE_MARKER = "*** NO DISTURBANCE ***"
+NO_TREATMENT_MARKER = "*NO MANAGEMENT PRESCRIPTION ADDED"
+NO_DISTURBANCE_MARKER = "*NO DISTURBANCE ADDED"
 
 
 def test_standid_as_int():
@@ -328,6 +328,23 @@ def test_custom_template_reports_provided_variables():
 
     err = exc_info.value
     assert "stand_id" in err.provided_variables
+
+
+def test_custom_template_reports_provided_variables_with_events():
+    """Error includes treatment/disturbance when given as events."""
+    template = "{{ stand_id }}\n{{ missing_var }}"
+    treatment = FvsEvent(name="T", content="KW")
+    disturbance = FvsEvent(name="D", content="KW")
+    keyfile = _make_keyfile(
+        template=template,
+        treatments=[treatment],
+        disturbances=[disturbance],
+    )
+    with pytest.raises(FvsTemplateRenderError) as exc_info:
+        keyfile.content
+
+    err = exc_info.value
+    assert "stand_id" in err.provided_variables
     assert "treatment" in err.provided_variables
     assert "disturbance" in err.provided_variables
 
@@ -362,6 +379,46 @@ def test_second_pass_missing_variable_raises():
     )
     with pytest.raises(FvsTemplateRenderError, match="missing_param"):
         keyfile.content
+
+
+# -------------------------------------------------------
+# Reserved template_params keys
+# -------------------------------------------------------
+
+
+def test_keyfile_rejects_reserved_stand_id_in_template_params():
+    with pytest.raises(ValidationError, match="reserved key"):
+        _make_keyfile(template_params={"stand_id": "evil"})
+
+
+def test_keyfile_rejects_reserved_treatment_in_template_params():
+    with pytest.raises(ValidationError, match="reserved key"):
+        _make_keyfile(template_params={"treatment": "evil"})
+
+
+def test_keyfile_rejects_reserved_variant_in_template_params():
+    with pytest.raises(ValidationError, match="reserved key"):
+        _make_keyfile(template_params={"variant": "SN"})
+
+
+def test_keyfile_rejects_reserved_disturbance_in_template_params():
+    with pytest.raises(ValidationError, match="reserved key"):
+        _make_keyfile(template_params={"disturbance": "evil"})
+
+
+def test_keyfile_rejects_reserved_treatments_plural_in_template_params():
+    with pytest.raises(ValidationError, match="reserved key"):
+        _make_keyfile(template_params={"treatments": ["CMCC"]})
+
+
+def test_keyfile_rejects_reserved_disturbances_plural_in_template_params():
+    with pytest.raises(ValidationError, match="reserved key"):
+        _make_keyfile(template_params={"disturbances": ["FIC1"]})
+
+
+def test_keyfile_allows_non_reserved_template_params():
+    keyfile = _make_keyfile(template_params={"num_cycles": 10})
+    assert keyfile.template_params == {"num_cycles": 10}
 
 
 # -------------------------------------------------------

@@ -19,7 +19,9 @@ def get_fvs_version(variant: FvsVariant) -> str:
             outs, _ = proc.communicate()
             proc.kill()
         parsed_fvs_response = [
-            x for x in outs.decode().strip().split(" ") if x.startswith("RV:")
+            x[3:]
+            for x in outs.decode().strip().split(" ")
+            if x.startswith("RV:")
         ]
         return parsed_fvs_response[0]
     return "not installed"

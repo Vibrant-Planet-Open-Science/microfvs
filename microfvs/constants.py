@@ -1,13 +1,22 @@
-FVS_DATABASE_NAME = "FVS_Data.db"
+CONTENT_TYPE = "Content-Type"
 EMPTY_STRING = ""
+EXAMPLE_DISTURBANCE_EVENT = {
+    "name": "undisturbed",
+    "content": "*** NO DISTURBANCE",
+}
+EXAMPLE_DISTURBANCE_STR = "FIC1"
+EXAMPLE_TREATMENT_EVENT = {"name": "unmanaged", "content": "*** NO MANAGEMENT"}
+EXAMPLE_TREATMENT_STR = "CMCC"
+FVS_DATABASE_NAME = "FVS_Data.db"
+FVS_VARIANT_COLUMN_NAME = "variant"
+INDENT = "    "
+INDENT2 = INDENT * 2
+KCP_SUFFIX = ".kcp"
 LINE_ENDING_STRING = "\n"
+STAND_ID_COLUMN_NAME = "stand_id"
 STR_PROCESS = "PROCESS"
 STR_STAND_ID = "stand_id"
 STR_STOP = "STOP"
-KCP_SUFFIX = ".kcp"
-CONTENT_TYPE = "Content-Type"
-STAND_ID_COLUMN_NAME = "stand_id"
-FVS_VARIANT_COLUMN_NAME = "variant"
 
 
 # fvs output file constants

@@ -57,6 +57,14 @@ jobs:
         run: |
           set -euo pipefail
 
+          uvicorn microfvs.main:app --host 0.0.0.0 --port 8000 &
+          for i in $(seq 30); do
+            wget -q --spider http://localhost:8000/version 2>/dev/null && break
+            sleep 1
+          done
+
+          git config --global --add safe.directory "${GITHUB_WORKSPACE}"
+
           mapfile -d '' -t notebooks < <(
             git diff -z --name-only --diff-filter=AM "${BASE_SHA}...${HEAD_SHA}" -- '*.ipynb'
           )

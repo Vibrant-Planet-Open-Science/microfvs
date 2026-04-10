@@ -67,7 +67,7 @@ max-doc-length = 72
 [tool.ruff.lint.pydocstyle]
 convention = "google"
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 # Ignore pydocstyle and generic df names in test files.
 "test_*.py" = ["D", "PD901"]
 "microfvs/tests/*.py" = ["D", "PD901"]

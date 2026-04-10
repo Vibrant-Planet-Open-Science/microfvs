@@ -12,6 +12,7 @@ from microfvs.constants import (
 )
 from microfvs.enums import FvsKeyfileTemplate
 from microfvs.models import (
+    FvsEvent,
     FvsKeyfile,
     FvsResult,
     FvsStandInit,
@@ -26,6 +27,8 @@ def run_fvs(
     tree_init: FvsTreeInit | None = None,
     template: str = FvsKeyfileTemplate.DEFAULT,
     template_params: dict = {},
+    treatments: list[str | FvsEvent] | None = None,
+    disturbances: list[str | FvsEvent] | None = None,
     stand_stock_params: FvsStandStockParams = FvsStandStockParams(),
 ) -> FvsResult:
     """Runs a single FVS simulation and returns the result(s).
@@ -41,9 +44,15 @@ def run_fvs(
         template (str, optional): FVS keyfile template to use. Defaults
             to FvsKeyfileTemplate.DEFAULT
         template_params (dict, optional): Template variables
-            (e.g. treatments, disturbances, num_cycles,
-            cycle_length, custom placeholders). ``variant`` and
-            ``stand_id`` are always derived from ``stand_init``.
+            (e.g. num_cycles, cycle_length, custom placeholders).
+            ``variant`` and ``stand_id`` are always derived from
+            ``stand_init``.
+        treatments (list[str | FvsEvent], optional): Treatment events
+            to inject into the keyfile. Accepts FvsEvent objects or
+            string keys resolved via the event library.
+        disturbances (list[str | FvsEvent], optional): Disturbance
+            events to inject into the keyfile. Same coercion rules
+            as treatments.
         stand_stock_params (FvsStandStockParams): Optional set of
             parameters to govern the generation of a Stand and Stock
             Table in the FVS outputs. Default is to produce the Stand
@@ -84,14 +93,11 @@ def run_fvs(
         ]
         tree_data.to_sql("fvs_treeinit", conn, if_exists="replace", index=False)
 
-        kw = dict(template_params)
-        treatments = kw.pop("treatments", None)
-        disturbances = kw.pop("disturbances", None)
         keyfile_args: dict = {
             "variant": fvs_variant,
             "stand_id": stand_id,
             "template": template,
-            "template_params": kw,
+            "template_params": template_params,
         }
         if treatments is not None:
             keyfile_args["treatments"] = treatments
