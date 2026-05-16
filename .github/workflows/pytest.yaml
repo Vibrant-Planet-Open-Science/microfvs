@@ -10,7 +10,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install Python runtime
         run: |
@@ -20,7 +20,7 @@ jobs:
           echo /opt/venv/bin >> "$GITHUB_PATH"
 
       - name: Cache pip wheels
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('requirements*.txt') }}
@@ -40,13 +40,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha }}
-
-      - name: Fetch PR base commit
-        run: git fetch --no-tags origin "${{ github.event.pull_request.base.sha }}"
 
       - name: Install Python runtime
         run: |
@@ -56,8 +53,11 @@ jobs:
           python3 -m venv /opt/venv
           echo /opt/venv/bin >> "$GITHUB_PATH"
 
+      - name: Fetch PR base commit
+        run: git fetch --no-tags origin "${{ github.event.pull_request.base.sha }}"
+
       - name: Cache pip wheels
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('requirements*.txt') }}
