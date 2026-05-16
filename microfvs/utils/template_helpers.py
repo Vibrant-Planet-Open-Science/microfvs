@@ -52,12 +52,10 @@ def classify_template_variables(
     ast = env.parse(template)
     occurrences = _walk_ast(ast)
 
-    all_names: set[str] = set()
     optional_names: set[str] = set()
     required_names: set[str] = set()
 
     for name, is_optional in occurrences:
-        all_names.add(name)
         if is_optional:
             optional_names.add(name)
         else:
@@ -67,6 +65,29 @@ def classify_template_variables(
     return ClassifiedTemplateVariables(
         required=sorted(required_names),
         optional=sorted(truly_optional),
+    )
+
+
+# Required on keyfile API requests but not always in Jinja template.
+FVS_KEYFILE_API_REQUIRED_FIELDS = frozenset({"variant"})
+
+
+def classify_fvs_keyfile_template_variables(
+    template: str,
+) -> ClassifiedTemplateVariables:
+    """Classify template variables for keyfile API documentation.
+
+    Merges :data:`FVS_KEYFILE_API_REQUIRED_FIELDS` into ``required`` so
+    callers see fields like ``variant`` that must be supplied on every
+    request even when they do not appear in the template AST.
+    """
+    classified = classify_template_variables(template)
+    required = sorted(
+        set(classified.required) | FVS_KEYFILE_API_REQUIRED_FIELDS
+    )
+    return ClassifiedTemplateVariables(
+        required=required,
+        optional=classified.optional,
     )
 
 

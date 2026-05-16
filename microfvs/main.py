@@ -31,7 +31,7 @@ from microfvs.utils.fvs_version import get_fvs_versions
 from microfvs.utils.run_fvs import run_fvs
 from microfvs.utils.template_helpers import (
     ClassifiedTemplateVariables,
-    classify_template_variables,
+    classify_fvs_keyfile_template_variables,
 )
 
 app = FastAPI()
@@ -79,7 +79,7 @@ def check_fvs_version() -> dict[str, str]:
 def example_keyfile_template() -> dict[str, str | ClassifiedTemplateVariables]:
     """Return default template for simulating a single stand in FVS."""
     template = FvsKeyfileTemplate.DEFAULT
-    template_params = classify_template_variables(template)
+    template_params = classify_fvs_keyfile_template_variables(template)
     return {
         "template_params": template_params,
         "template": template,
@@ -296,9 +296,7 @@ def get_outfile(
 def all_usfs_fvs_treatment_codes() -> dict[str, list[str]]:
     """Returns all USFS FVS treament codes."""
     with importlib.resources.as_file(
-        importlib.resources.files(
-            "microfvs.keyword_components.treatments.usfs"
-        ).joinpath("")
+        importlib.resources.files("microfvs.keyword_components.treatments.usfs")
     ) as path:
         return {
             "USFS Treatments": sorted([x.stem for x in path.rglob("*.kcp")])

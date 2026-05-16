@@ -37,7 +37,7 @@ def test_default_template_loads():
 def test_default_template_get_params():
     params = FvsKeyfileTemplate.DEFAULT.get_template_params()
     assert isinstance(params, ClassifiedTemplateVariables)
-    assert params.required == ["stand_id"]
+    assert params.required == ["stand_id", "variant"]
     for optional in [
         "num_cycles",
         "cycle_length",

@@ -4,6 +4,7 @@ from microfvs.enums import FvsKeyfileTemplate
 from microfvs.exceptions import FvsTemplateRenderError
 from microfvs.utils.template_helpers import (
     ClassifiedTemplateVariables,
+    classify_fvs_keyfile_template_variables,
     classify_template_variables,
     render_template,
 )
@@ -70,11 +71,18 @@ def test_classify_default_keyfile_template():
     """Only stand_id is required in the default template."""
     result = classify_template_variables(FvsKeyfileTemplate.DEFAULT)
     assert "stand_id" in result.required
+    assert "variant" not in result.required
     assert "num_cycles" in result.optional
     assert "cycle_length" in result.optional
     assert "first_cycle_length" in result.optional
     assert "treatment" in result.optional
     assert "disturbance" in result.optional
+
+
+def test_classify_fvs_keyfile_template_includes_variant():
+    """API classification always lists variant as required."""
+    result = classify_fvs_keyfile_template_variables("{{ foo }}")
+    assert result.required == ["foo", "variant"]
 
 
 # -------------------------------------------------------
