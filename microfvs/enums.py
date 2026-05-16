@@ -1,7 +1,10 @@
 import importlib.resources
 from enum import StrEnum
 
-from microfvs.utils.template_helpers import classify_template_variables
+from microfvs.utils.template_helpers import (
+    ClassifiedTemplateVariables,
+    classify_fvs_keyfile_template_variables,
+)
 
 
 class FvsKeyfileTemplate(StrEnum):
@@ -13,9 +16,9 @@ class FvsKeyfileTemplate(StrEnum):
         .read_text()
     )
 
-    def get_template_params(self) -> list[str]:
-        """Get named parameters that can be injected into template."""
-        return classify_template_variables(self.value)
+    def get_template_params(self) -> ClassifiedTemplateVariables:
+        """Classify param for keyfile requests from this template."""
+        return classify_fvs_keyfile_template_variables(self.value)
 
 
 class FvsEventType(StrEnum):

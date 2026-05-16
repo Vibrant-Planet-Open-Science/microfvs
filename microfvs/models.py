@@ -82,9 +82,7 @@ class FvsEventLibrary:
     def treatments(self) -> dict[str, FvsEvent]:
         """Get a dict of all known treatments."""
         with importlib.resources.as_file(
-            importlib.resources.files(
-                "microfvs.keyword_components.treatments"
-            ).joinpath("")
+            importlib.resources.files("microfvs.keyword_components.treatments")
         ) as path:
             return {
                 x.stem: FvsEvent(name=x.stem, content=x.read_text())
@@ -97,7 +95,7 @@ class FvsEventLibrary:
         with importlib.resources.as_file(
             importlib.resources.files(
                 "microfvs.keyword_components.treatments.usfs"
-            ).joinpath("")
+            )
         ) as path:
             return {
                 x.stem: FvsEvent(name=x.stem, content=x.read_text())
@@ -110,7 +108,7 @@ class FvsEventLibrary:
         with importlib.resources.as_file(
             importlib.resources.files(
                 "microfvs.keyword_components.disturbances"
-            ).joinpath("")
+            )
         ) as path:
             return {
                 x.stem: FvsEvent(name=x.stem, content=x.read_text())
