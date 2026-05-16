@@ -39,22 +39,27 @@ jobs:
       image: ghcr.io/vibrant-planet-open-science/usfs-fvs:FS2026.1
 
     steps:
+      # checkout requires git in the container image; otherwise it omits .git
+      - name: Install git
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends git
+
       - name: Checkout code
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha }}
 
-      - name: Install Python runtime
-        run: |
-          apt-get update
-          apt-get install -y --no-install-recommends \
-            git python3 python3-pip python3-venv wget
-          python3 -m venv /opt/venv
-          echo /opt/venv/bin >> "$GITHUB_PATH"
-
       - name: Fetch PR base commit
         run: git fetch --no-tags origin "${{ github.event.pull_request.base.sha }}"
+
+      - name: Install Python runtime
+        run: |
+          apt-get install -y --no-install-recommends \
+            python3 python3-pip python3-venv wget
+          python3 -m venv /opt/venv
+          echo /opt/venv/bin >> "$GITHUB_PATH"
 
       - name: Cache pip wheels
         uses: actions/cache@v5
