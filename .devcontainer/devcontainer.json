@@ -5,16 +5,18 @@
         "context": "..",
         "target": "dev"
     },
+    "remoteUser": "microfvs-dev",
+    "updateRemoteUserUID": true,
     "remoteEnv": {
         "PYTHONPATH": "${containerWorkspaceFolder}"
     },
     "features": {
         "ghcr.io/devcontainers/features/common-utils": {
+            "username": "microfvs-dev",
             "installNano": true,
             "installZsh": true,
             "configureZshAsDefaultShell": true
-        },
-        "ghcr.io/prulloac/devcontainer-features/pre-commit:latest": {}
+        }
     },
     "customizations": {
         "vscode": {
@@ -45,6 +47,6 @@
     "forwardPorts": [
         8000
     ],
-    "postCreateCommand": "pip3 freeze > /tmp/constraints.txt && pip3 install -r requirements-dev.txt -c /tmp/constraints.txt && pre-commit install",
+    "postCreateCommand": "pre-commit install",
     "postStartCommand": "uvicorn microfvs.main:app --host 0.0.0.0 --port 8000 --reload"
 }
