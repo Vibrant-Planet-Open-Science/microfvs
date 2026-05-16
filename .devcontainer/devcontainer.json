@@ -1,8 +1,9 @@
 {
     "name": "microfvs Dev Container",
     "build": {
-        "dockerfile": "Dockerfile",
-        "context": ".."
+        "dockerfile": "../Dockerfile",
+        "context": "..",
+        "target": "dev"
     },
     "remoteEnv": {
         "PYTHONPATH": "${containerWorkspaceFolder}"
@@ -44,6 +45,6 @@
     "forwardPorts": [
         8000
     ],
-    "postCreateCommand": "pip freeze > /tmp/constraints.txt && pip install -r requirements-dev.txt -c /tmp/constraints.txt && pre-commit install",
+    "postCreateCommand": "pip3 freeze > /tmp/constraints.txt && pip3 install -r requirements-dev.txt -c /tmp/constraints.txt && pre-commit install",
     "postStartCommand": "uvicorn microfvs.main:app --host 0.0.0.0 --port 8000 --reload"
 }

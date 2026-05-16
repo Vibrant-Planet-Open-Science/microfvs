@@ -18,12 +18,19 @@ Use the GitHub website to clone this repo to your machine, or use the command li
 `git clone <repository-url>`
 
 ### Build the Docker container
-Navigate to the root of your local clone of this repository on the command line, then build the container:
+Navigate to the root of your local clone of this repository on the command line, then build the container. FVS binaries are copied from a pinned release image (`ghcr.io/vibrant-planet-open-science/usfs-fvs:FS2026.1` by default, but feel free to try `ghcr.io/vibrant-planet-open-science/usfs-fvs:latest`), so the build should complete in a few minutes:
 ```
 cd microfvs
-docker build -t microfvs .
+docker build --target microfvs -t microfvs .
 ```
-This may take a while because it is building FVS from source (using a pinned FVS release version to ensure reproducible build that passes basic tests for FVS simulations on Ubuntu OS). Go make a cup of coffee. 
+To use a different FVS release tag, pass `FVS_TAG` as a build argument, for example:
+```
+docker build --target microfvs --build-arg FVS_TAG=FS2026.1 -t microfvs .
+```
+or 
+```
+docker build --target microfvs --build-arg FVS_TAG=latest -t microfvs .
+```
 
 ### Run the API locally inside the Docker container
 The Docker container running the MicroFVS server should be accessible on port 80, you'll need to forward that to your local machine to be able to communicate with the MicroFVS service. To forward to localhost 8080, for example:

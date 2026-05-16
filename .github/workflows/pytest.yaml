@@ -1,15 +1,26 @@
 name: Pytest with Docker
 
 on: [pull_request]
+
+env:
+  FVS_TAG: FS2026.1
+
 jobs:
   test:
     runs-on: ubuntu-latest
     container:
-      image: daviddanieldiaz/fvs:FS2025.4c
+      image: ghcr.io/vibrant-planet-open-science/usfs-fvs:${{ env.FVS_TAG }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Install Python runtime
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends python3 python3-pip python3-venv
+          python3 -m venv /opt/venv
+          echo /opt/venv/bin >> "$GITHUB_PATH"
 
       - name: Cache pip wheels
         uses: actions/cache@v4
@@ -23,18 +34,25 @@ jobs:
         run: pip install -r requirements.txt -r requirements-dev.txt
 
       - name: Run tests inside container
-        run: pytest .
+        run: python -m pytest .
 
   nbval:
     runs-on: ubuntu-latest
     container:
-      image: daviddanieldiaz/fvs:FS2025.4c
+      image: ghcr.io/vibrant-planet-open-science/usfs-fvs:${{ env.FVS_TAG }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Install Python runtime
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends python3 python3-pip python3-venv
+          python3 -m venv /opt/venv
+          echo /opt/venv/bin >> "$GITHUB_PATH"
 
       - name: Cache pip wheels
         uses: actions/cache@v4
