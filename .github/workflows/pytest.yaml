@@ -47,7 +47,8 @@ jobs:
       - name: Install Python runtime
         run: |
           apt-get update
-          apt-get install -y --no-install-recommends python3 python3-pip python3-venv
+          apt-get install -y --no-install-recommends \
+            git python3 python3-pip python3-venv wget
           python3 -m venv /opt/venv
           echo /opt/venv/bin >> "$GITHUB_PATH"
 
