@@ -2,14 +2,11 @@ name: Pytest with Docker
 
 on: [pull_request]
 
-env:
-  FVS_TAG: FS2026.1
-
 jobs:
   test:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/vibrant-planet-open-science/usfs-fvs:${{ env.FVS_TAG }}
+      image: ghcr.io/vibrant-planet-open-science/usfs-fvs:FS2026.1
 
     steps:
       - name: Checkout code
@@ -39,7 +36,7 @@ jobs:
   nbval:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/vibrant-planet-open-science/usfs-fvs:${{ env.FVS_TAG }}
+      image: ghcr.io/vibrant-planet-open-science/usfs-fvs:FS2026.1
 
     steps:
       - name: Checkout code
