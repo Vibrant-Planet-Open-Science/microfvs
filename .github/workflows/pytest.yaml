@@ -52,7 +52,9 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Fetch PR base commit
-        run: git fetch --no-tags origin "${{ github.event.pull_request.base.sha }}"
+        run: |
+          git config --global --add safe.directory "${GITHUB_WORKSPACE}"
+          git fetch --no-tags origin "${{ github.event.pull_request.base.sha }}"
 
       - name: Install Python runtime
         run: |
@@ -87,8 +89,6 @@ jobs:
             wget -qO- http://localhost:8000/version >/dev/null 2>&1 && break
             sleep 1
           done
-
-          git config --global --add safe.directory "${GITHUB_WORKSPACE}"
 
           if ! git rev-parse --verify --quiet "${BASE_SHA}^{commit}" >/dev/null; then
             echo "Base commit ${BASE_SHA} is not available after fetch." >&2
