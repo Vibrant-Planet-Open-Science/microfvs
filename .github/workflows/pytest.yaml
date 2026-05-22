@@ -31,7 +31,7 @@ jobs:
             -w /workspaces/microfvs \
             -e PYTHONPATH=/workspaces/microfvs \
             ${{ env.CI_IMAGE }} \
-            python -m pytest .
+            bash -c 'uv sync --frozen --extra dev && python -m pytest .'
 
   nbval:
     needs: test
@@ -110,6 +110,7 @@ jobs:
             ${{ env.CI_IMAGE }} \
             bash -c '
               set -euo pipefail
+              uv sync --frozen --extra dev
               uvicorn microfvs.main:app --host 0.0.0.0 --port 8000 &
               for i in $(seq 30); do
                 wget -qO- http://localhost:8000/version >/dev/null 2>&1 && break
