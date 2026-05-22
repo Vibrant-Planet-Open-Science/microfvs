@@ -6,34 +6,32 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
     python3 \
-    python3-pip \
     python3-venv \
     && rm -rf /var/lib/apt/lists/*
-RUN python3 -m venv /opt/venv
+COPY --from=ghcr.io/astral-sh/uv:0.7 /uv /uvx /bin/
+ENV UV_PROJECT_ENVIRONMENT=/opt/venv
+RUN uv venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH" \
-    VIRTUAL_ENV="/opt/venv" \
-    PIP_PREFER_BINARY=1
+    VIRTUAL_ENV="/opt/venv"
 
 FROM runtime-base AS microfvs
 WORKDIR /code
-COPY requirements.txt /code/requirements.txt
-RUN pip install --no-cache-dir -r /code/requirements.txt
+COPY pyproject.toml uv.lock /code/
+RUN uv sync --frozen --no-dev --no-install-project
 COPY microfvs /code/microfvs
 EXPOSE 80
 CMD ["uvicorn", "microfvs.main:app", "--host", "0.0.0.0", "--port", "80"]
 
 FROM runtime-base AS dev
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends git sudo \
+    && apt-get install -y --no-install-recommends wget \
     && rm -rf /var/lib/apt/lists/* \
     && if id -u ubuntu >/dev/null 2>&1; then \
     usermod -l microfvs-dev ubuntu \
     && groupmod -n microfvs-dev ubuntu \
     && usermod -d /home/microfvs-dev -m microfvs-dev; \
     fi
-COPY requirements.txt requirements-dev.txt /tmp/
-RUN pip install --upgrade pip \
-    && pip install --no-cache-dir -r /tmp/requirements.txt \
-    && pip freeze > /tmp/constraints.txt \
-    && pip install --no-cache-dir -r /tmp/requirements-dev.txt -c /tmp/constraints.txt
+COPY pyproject.toml uv.lock /tmp/
+WORKDIR /tmp
+RUN uv sync --frozen --extra dev --no-install-project
 WORKDIR /workspaces/microfvs

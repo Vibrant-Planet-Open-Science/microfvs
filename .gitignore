@@ -1,3 +1,4 @@
+.ci-changed-notebooks
 __pycache__/
 .devcontainer/
 .DS_Store
