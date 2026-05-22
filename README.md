@@ -44,13 +44,23 @@ Once the web service is up-and-running inside your Docker container, you should 
 
 ## Development
 
-A **dev container** is provided under [`.devcontainer/`](.devcontainer/) for VS Code and Cursor. Open the repository with **Dev Containers: Reopen in Container** to get the `dev` Docker target, Python tooling, and extensions preconfigured; `postCreateCommand` installs pre-commit hooks automatically.
+A **dev container** is provided under [`.devcontainer/`](.devcontainer/) for VS Code and Cursor. Open the repository with **Dev Containers: Reopen in Container** to get the `dev` Docker target, Python tooling, and extensions preconfigured. On first open, `postCreateCommand` runs `uv sync --frozen --extra dev` (creating a project-local `.venv` in your clone, gitignored) and installs pre-commit hooks. After pulling changes that touch the Dockerfile or lockfile, **rebuild** the dev container (or run `uv sync --extra dev` manually).
 
-If you don't want to use a dev container, make sure you install dev dependencies and hooks before opening a pull request:
+The `.venv` directory lives on your host via the bind-mounted workspace (Linux binaries from the container). You can delete it and re-run `uv sync --extra dev` to recreate.
+
+To run the API locally inside the dev container (port 8000 is forwarded automatically):
+
+```bash
+uv run uvicorn microfvs.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+Then open `http://localhost:8000/docs` on your machine.
+
+If you don't want to use a dev container, install dev dependencies and hooks the same way before opening a pull request:
 
 ```bash
 uv sync --extra dev
-pre-commit install
+uv pre-commit install
 ```
 
 Hooks run on each commit (secret scan, Ruff, mypy). Run them manually with `pre-commit run --all-files`. CI runs the same checks on on files included in pull requests via the Lint workflow.

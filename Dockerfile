@@ -1,7 +1,7 @@
 ARG FVS_TAG=FS2026.1
 ARG FVS_IMAGE=ghcr.io/vibrant-planet-open-science/usfs-fvs:${FVS_TAG}
 
-FROM ${FVS_IMAGE} AS runtime-base
+FROM ${FVS_IMAGE} AS fvs-python-base
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -9,6 +9,8 @@ RUN apt-get update \
     python3-venv \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=ghcr.io/astral-sh/uv:0.7 /uv /uvx /bin/
+
+FROM fvs-python-base AS runtime-base
 ENV UV_PROJECT_ENVIRONMENT=/opt/venv
 RUN uv venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH" \
@@ -22,7 +24,7 @@ COPY microfvs /code/microfvs
 EXPOSE 80
 CMD ["uvicorn", "microfvs.main:app", "--host", "0.0.0.0", "--port", "80"]
 
-FROM runtime-base AS dev
+FROM fvs-python-base AS dev
 RUN apt-get update \
     && apt-get install -y --no-install-recommends wget \
     && rm -rf /var/lib/apt/lists/* \
@@ -31,7 +33,4 @@ RUN apt-get update \
     && groupmod -n microfvs-dev ubuntu \
     && usermod -d /home/microfvs-dev -m microfvs-dev; \
     fi
-COPY pyproject.toml uv.lock /tmp/
-WORKDIR /tmp
-RUN uv sync --frozen --extra dev --no-install-project
 WORKDIR /workspaces/microfvs

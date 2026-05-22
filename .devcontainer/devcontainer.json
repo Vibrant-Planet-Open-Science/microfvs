@@ -8,7 +8,8 @@
     "remoteUser": "microfvs-dev",
     "updateRemoteUserUID": true,
     "remoteEnv": {
-        "PYTHONPATH": "${containerWorkspaceFolder}"
+        "PYTHONPATH": "${containerWorkspaceFolder}",
+        "PATH": "${containerWorkspaceFolder}/.venv/bin:${containerEnv:PATH}"
     },
     "features": {
         "ghcr.io/devcontainers/features/common-utils": {
@@ -47,6 +48,5 @@
     "forwardPorts": [
         8000
     ],
-    "postCreateCommand": "pre-commit install",
-    "postStartCommand": "uvicorn microfvs.main:app --host 0.0.0.0 --port 8000 --reload"
+    "postCreateCommand": "uv sync --frozen --extra dev && uv run pre-commit install"
 }
