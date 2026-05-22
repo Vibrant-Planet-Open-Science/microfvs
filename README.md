@@ -9,7 +9,6 @@ The API also provides access to a [national compendium of silvicultural treatmen
 
 [^1]: Houtman, Rachel M.; Day, Michelle A.; Hooten, Erin; Ritchie, Martin W.; Jain, Theresa B.; Schuler, Thomas M. 2023. Forest Vegetation Simulator keyword component (KCP) files associated with the compendium of silvicultural treatments for forest types in the United States. Updated 04 June 2024. Fort Collins, CO: Forest Service Research Data Archive. https://doi.org/10.2737/RDS-2022-0037
 
-
 ## Getting Started
 You'll need to have Docker and Git installed to be able to get this working. 
 
@@ -41,3 +40,17 @@ Use your web browser to go to the URL `http://localhost:<your-port>/docs` and yo
 
 ### Utilize the web service
 Once the web service is up-and-running inside your Docker container, you should be able to interact with it by making requests to the MicroFVS endpoints using the pattern `http://localhost:<your-port>/<endpoint>` along with any parameters that might be involved in making GET or POST requests using the API. You should be able to launch example requests from the documentation page, or from your favorite programming language that can prepare web requests like Python or R. Stay tuned as we develop wrappers for the API to make access from Python and R simpler. 
+
+
+## Development
+
+A **dev container** is provided under [`.devcontainer/`](.devcontainer/) for VS Code and Cursor. Open the repository with **Dev Containers: Reopen in Container** to get the `dev` Docker target, Python tooling, and extensions preconfigured; `postCreateCommand` installs pre-commit hooks automatically.
+
+If you don't want to use a dev container, make sure you install dev dependencies and hooks before opening a pull request:
+
+```bash
+uv sync --extra dev
+pre-commit install
+```
+
+Hooks run on each commit (secret scan, Ruff, mypy). Run them manually with `pre-commit run --all-files`. CI runs the same checks on on files included in pull requests via the Lint workflow.
