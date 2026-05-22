@@ -1,9 +1,9 @@
 name: Lint
 
-on: [push]
+on: [pull_request]
 jobs:
   lint:
-    name: Pre-commit checks
+    name: Lint and secret scan
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -21,4 +21,5 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pre-commit-
 
+      # Runs all hooks in .pre-commit-config.yaml (gitleaks, ruff, mypy).
       - uses: pre-commit/action@v3.0.1
