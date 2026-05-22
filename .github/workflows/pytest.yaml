@@ -2,51 +2,42 @@ name: Pytest with Docker
 
 on: [pull_request]
 
+env:
+  FVS_TAG: FS2026.1
+  CI_IMAGE: microfvs-ci:dev
+
 jobs:
   test:
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/vibrant-planet-open-science/usfs-fvs:FS2026.1
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
+      - uses: actions/checkout@v5
 
-      - name: Install Python runtime
-        run: |
-          apt-get update
-          apt-get install -y --no-install-recommends python3 python3-pip python3-venv
-          python3 -m venv /opt/venv
-          echo /opt/venv/bin >> "$GITHUB_PATH"
+      - uses: docker/setup-buildx-action@v3
 
-      - name: Cache pip wheels
-        uses: actions/cache@v5
+      - uses: docker/build-push-action@v6
         with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements*.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
+          context: .
+          target: dev
+          tags: ${{ env.CI_IMAGE }}
+          load: true
+          build-args: FVS_TAG=${{ env.FVS_TAG }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt -r requirements-dev.txt
-
-      - name: Run tests inside container
-        run: python -m pytest .
+      - name: Run tests inside dev image
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/workspaces/microfvs" \
+            -w /workspaces/microfvs \
+            -e PYTHONPATH=/workspaces/microfvs \
+            ${{ env.CI_IMAGE }} \
+            python -m pytest .
 
   nbval:
+    needs: test
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/vibrant-planet-open-science/usfs-fvs:FS2026.1
-
     steps:
-      # checkout requires git in the container image; otherwise it omits .git
-      - name: Install git
-        run: |
-          apt-get update
-          apt-get install -y --no-install-recommends git
-
-      - name: Checkout code
-        uses: actions/checkout@v5
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha }}
@@ -56,39 +47,14 @@ jobs:
           git config --global --add safe.directory "${GITHUB_WORKSPACE}"
           git fetch --no-tags origin "${{ github.event.pull_request.base.sha }}"
 
-      - name: Install Python runtime
-        run: |
-          apt-get install -y --no-install-recommends \
-            python3 python3-pip python3-venv wget
-          python3 -m venv /opt/venv
-          echo /opt/venv/bin >> "$GITHUB_PATH"
-
-      - name: Cache pip wheels
-        uses: actions/cache@v5
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements*.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt -r requirements-dev.txt
-          pip install -e .
-
-      - name: Run nbval-lax on changed notebooks
+      - name: List changed notebooks
+        id: notebooks
         shell: bash
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
-
-          uvicorn microfvs.main:app --host 0.0.0.0 --port 8000 &
-          for i in $(seq 30); do
-            wget -qO- http://localhost:8000/version >/dev/null 2>&1 && break
-            sleep 1
-          done
 
           if ! git rev-parse --verify --quiet "${BASE_SHA}^{commit}" >/dev/null; then
             echo "Base commit ${BASE_SHA} is not available after fetch." >&2
@@ -107,11 +73,48 @@ jobs:
           mapfile -d '' -t notebooks < /tmp/changed-notebooks
 
           if [ "${#notebooks[@]}" -eq 0 ]; then
+            echo "skip=true" >> "${GITHUB_OUTPUT}"
             echo "No notebooks changed in this PR; skipping nbval."
             exit 0
           fi
 
           printf 'Changed notebooks:\n'
           printf -- ' - %s\n' "${notebooks[@]}"
+          printf '%s\0' "${notebooks[@]}" > "${GITHUB_WORKSPACE}/.ci-changed-notebooks"
 
-          python -m pytest --nbval-lax "${notebooks[@]}"
+          echo "skip=false" >> "${GITHUB_OUTPUT}"
+
+      - uses: docker/setup-buildx-action@v3
+        if: steps.notebooks.outputs.skip != 'true'
+
+      - uses: docker/build-push-action@v6
+        if: steps.notebooks.outputs.skip != 'true'
+        with:
+          context: .
+          target: dev
+          tags: ${{ env.CI_IMAGE }}
+          load: true
+          build-args: FVS_TAG=${{ env.FVS_TAG }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Run nbval-lax on changed notebooks
+        if: steps.notebooks.outputs.skip != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            -v "${{ github.workspace }}:/workspaces/microfvs" \
+            -w /workspaces/microfvs \
+            -e PYTHONPATH=/workspaces/microfvs \
+            ${{ env.CI_IMAGE }} \
+            bash -c '
+              set -euo pipefail
+              uvicorn microfvs.main:app --host 0.0.0.0 --port 8000 &
+              for i in $(seq 30); do
+                wget -qO- http://localhost:8000/version >/dev/null 2>&1 && break
+                sleep 1
+              done
+              mapfile -d "" -t notebooks < /workspaces/microfvs/.ci-changed-notebooks
+              exec python -m pytest --nbval-lax "${notebooks[@]}"
+            '

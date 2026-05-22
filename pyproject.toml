@@ -13,11 +13,32 @@ license = "CC-BY-NC-SA-4.0"
 license-files = ["LICENSE"]
 readme = "README.md"
 requires-python = ">=3.12"
-dynamic = ["dependencies", "optional-dependencies"]
+dependencies = [
+    "fastapi==0.135.2",
+    "jinja2==3.1.6",
+    "pandas==3.0.1",
+    "pydantic==2.12.5",
+    "sqlalchemy==2.0.48",
+    "uvicorn==0.42.0",
+]
 
-[tool.setuptools.dynamic]
-dependencies = { file = ["requirements.txt"] }
-optional-dependencies = { dev = { file = ["requirements-dev.txt"] } }
+[project.optional-dependencies]
+dev = [
+    "ipykernel==7.2.0",
+    "pre-commit==4.6.0",
+    "mypy==1.19.1",
+    "pytest==9.0.1",
+    "pytest-mock==3.15.1",
+    "requests==2.33.1",
+    "ruff==0.15.7",
+    "nbval==0.11.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["microfvs*"]
+
+[tool.uv]
 
 [tool.ruff]
 required-version = ">=0.11"
