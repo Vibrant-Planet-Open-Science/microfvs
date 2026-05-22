@@ -48,11 +48,19 @@ A **dev container** is provided under [`.devcontainer/`](.devcontainer/) for VS 
 
 The `.venv` directory lives on your host via the bind-mounted workspace (Linux binaries from the container). You can delete it and re-run `uv sync --extra dev` to recreate.
 
+To run the API locally inside the dev container (port 8000 is forwarded automatically):
+
+```bash
+uv run uvicorn microfvs.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+Then open `http://localhost:8000/docs` on your machine.
+
 If you don't want to use a dev container, install dev dependencies and hooks the same way before opening a pull request:
 
 ```bash
 uv sync --extra dev
-pre-commit install
+uv pre-commit install
 ```
 
 Hooks run on each commit (secret scan, Ruff, mypy). Run them manually with `pre-commit run --all-files`. CI runs the same checks on on files included in pull requests via the Lint workflow.
