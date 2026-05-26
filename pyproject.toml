@@ -38,6 +38,9 @@ dev = [
 where = ["."]
 include = ["microfvs*"]
 
+[tool.setuptools.package-data]
+microfvs = ["**/*.j2", "**/*.kcp"]
+
 [tool.uv]
 
 [tool.ruff]
