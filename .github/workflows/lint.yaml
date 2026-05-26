@@ -1,6 +1,10 @@
 name: Lint
 
 on: [pull_request]
+
+permissions:
+  contents: read
+
 jobs:
   lint:
     name: Lint and secret scan
