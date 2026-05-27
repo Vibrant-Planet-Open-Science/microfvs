@@ -138,6 +138,50 @@ class FvsEventLibrary:
         raise ValueError(msg)
 
 
+class RegImputeLibrary:
+    """A class for looking up RegImpute keyword components."""
+
+    @cached_property
+    def _shade_tolerance_methods(self) -> dict[FvsVariant, str]:
+        """Get a dict of all known shade tolerance methods."""
+        with importlib.resources.as_file(
+            importlib.resources.files(
+                "microfvs.keyword_components.regen.regimpute.shade_tolerance_method"
+            )
+        ) as path:
+            return {
+                FvsVariant(x.stem): x.read_text().strip()
+                for x in path.rglob("*.kcp")
+            }
+
+    @cached_property
+    def _species_methods(self) -> dict[FvsVariant, str]:
+        """Get a dict of all known species methods."""
+        with importlib.resources.as_file(
+            importlib.resources.files(
+                "microfvs.keyword_components.regen.regimpute.species_method"
+            )
+        ) as path:
+            return {
+                FvsVariant(x.stem): x.read_text().strip()
+                for x in path.rglob("*.kcp")
+            }
+
+    def shade(self, variant: FvsVariant) -> str:
+        """Get the shade tolerance method for a given variant."""
+        if FvsVariant(variant) not in self._shade_tolerance_methods:
+            msg = f"{variant} is not a recognized FVS variant for shade tolerance methods."
+            raise ValueError(msg)
+        return self._shade_tolerance_methods[FvsVariant(variant)]
+
+    def species(self, variant: FvsVariant) -> str:
+        """Get the species method for a given variant."""
+        if FvsVariant(variant) not in self._species_methods:
+            msg = f"{variant} is not a recognized FVS variant for species methods."
+            raise ValueError(msg)
+        return self._species_methods[FvsVariant(variant)]
+
+
 class FvsStandStockParams(BaseModel):
     """Params for Stand and Stock Tables when scraping FVS results."""
 

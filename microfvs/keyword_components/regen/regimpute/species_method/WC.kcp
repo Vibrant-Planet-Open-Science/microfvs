@@ -1,0 +1,451 @@
+!This script (REGIMPUTE) assesses and adds species-specific natural tree regeneration (small saplings)
+!into FVS simulations when appropriate (stand is not already overstocked for its structural state).
+!Capacity for the stand to support tree establishment is assessed every FVS cycle by default.
+!Saplings are added into stands in the following FVS cycle, if appropriate. 
+!Triggering of regen frequency and conditionality is user-modifiable.
+!REGIMPUTE methodology and scripts were adapted from REPUTE (Don Vandendrische) by Sebastian Busby, Leila Giovannoni, Daniel Swann
+!to simulate background natural tree regeneration and pulses expected after silvicultural treatments.
+!Mark Castle updated base scripts into customizable functions. See methodological documentation for more information.
+
+!*****Important Notes***********
+!This script uses the Species Specific Method. Relative to the Shade Tolerance Method, this method better accounts for 
+!species-level establishment due to seed source species' functional traits beyond shade tolerance ranking.
+!The Species Specific method, however, is less computationally efficient, defines more variables in the event monitor,
+!and is more likely to cause errors (i.e., activity and event monitor maximum limits reached),
+!especially in FVS variants that support a large number of species (e.g., NE, SN, CR variants).
+
+!This script uses local seed source (live trees where DBH >= 5in and height >= 10ft) within the stand as a condition for adding tree regen.
+!If no live seed source trees exist within the stand, this script will not functionally add tree regen.
+
+!Minor tree species with few empirical regen observations (< 20 FIA conditions in which species' regen [small saplings] are present)
+!calculated at the variant level, do not experience regen addition due to uncertainty. 
+!Users can adjust this number when recalculating the variant sample, if desired.
+
+!This methodology is not particularly appropriate for representing tree species whose seeds are largely animal dispersed
+!or have primarily serotinous (wildfire activated) seed dispersal modes, unless those modes are well represented across broad landscapes.
+
+******Start Regen Code*************
+*The following code computes the forest structure state class (RGNST), an intersection between overstory QMD and canopy cover classes.
+
+*******************************************************************************
+*   Cmp_VegSt.kcp: Compute Vegetation State                                    *
+*   - Composite of: Cover Type = Ecoregion/Forest Group                        *
+*                   Size Class = QMD 5 inch class widths                       *
+*                   OS Density = Canopy Cover L=10-40%/M=40-70%/H=70+%         *
+*                   Stories    = Single vs Multiple                            *
+********************************************************************************
+*This code chunk computes the RGNST forest structure variable (Canopy cover * overstory QMD classes)
+*for each stand and all FVS cycles
+
+IF        10
+CYCLE GE 1
+THEN
+
+Compute            0
+_TotTrCt =Max((SpMcDBH(1,All,0,0.20,200.0,1.0,500.0,0),1))
+_LrgTrCt =Max((SpMcDBH(1,All,0,0.20,200.0,1.0,500.0,0)*0.20),20)
+_LrgTrCt =LinInt(_LrgTrCt/_TotTrCt,0,1,1,99999,_LrgTrCt,_LrgTrCt,0,0)
+_DiaLl   =DBHDist(3,Max(LinInt( &
+                 ((1.00-_LrgTrCt/_TotTrCt)*100), &
+                   0,10,10,30,30,50,50,70,70,90,90,100, &
+                   1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6,  6)-1,1))
+_DiaLu   =DBHDist(3,Max(LinInt( &
+                 ((1.00-_LrgTrCt/_TotTrCt)*100), &
+                   0,10,10,30,30,50,50,70,70,90,90,100, &
+                   1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6,  6),1))
+_DiaL    =LinInt((Mod(((1.00-_LrgTrCt/_TotTrCt)*100)-10,20)/20), &
+                 0,1,_DiaLl,_DiaLu)                   
+_DiaU    =DBHDist(3,6)+0.1
+_QMDc    =SpMcDBH(5,All,0,_DiaL,_DiaU,5.0,500.0,0)
+
+_CC00p   =SpMcDBH(7,All,0,00.00,99.0,0.0,500.0,0)
+_CC05p   =SpMcDBH(7,All,0,05.00,99.0,0.0,500.0,0)
+_CC10p   =SpMcDBH(7,All,0,10.00,99.0,0.0,500.0,0)
+_CC15p   =SpMcDBH(7,All,0,15.00,99.0,0.0,500.0,0)
+_CC20p   =SpMcDBH(7,All,0,20.00,99.0,0.0,500.0,0)
+
+_CCx     =LinInt(_CC00p,0,10,10,999,0,0,1,1)
+_QMDc    =_QMDc*_CCx
+
+_DomLayr =LinInt(_QMDc,00,05,05,10,10,15,15,20,20,99,1,1,2,2,3,3,4,4,5,5)*_CCx
+_DomCC   =LinInt(_DomLayr, &
+             1,     2,     2,     3,     3,     4,     4,     5,     5,     9, &
+        _CC00p,_CC00p,_CC05p,_CC05p,_CC10p,_CC10p,_CC15p,_CC15p,_CC20p,_CC20p) &
+        *_CCx
+_Canopy  =LinInt(_CC00p,0,40,40,70,70,999,1,1,2,2,3,3)*_CCx
+
+RGNST   =LinInt((_DomLayr*10+_Canopy),0,1,1,2,2,9, &
+                 0,0,1,1,(_DomLayr*10+_Canopy),(_DomLayr*10+_Canopy))
+End
+ENDIF
+
+********************************************************************************
+*   End of Cmp_VegSt.kcp                                                       *
+********************************************************************************
+
+********************************************************************************
+*Define empirically estimated species-specific average expected sapling density by RGNST class and species
+********************************************************************************
+**Assign sapling count (number of trees added via regeneration) based on stand RGNST value. 
+**This is done via LININT keyword, a way of assigning values based on another value. 
+**RGNST value is based on cc and qmd class. The way to interpret the LININT coding is that values
+**on the first row are sequentually linked to values on the second row.
+
+*The matrices have been pre-calculated as mean empirical regen (small sapling density 1-3 inches diameter)
+*WHERE species-specific seed source is present (Species-specific TPA > 0 [Trees GE 5 inches DBH and 10 feet tall])
+*across FIA conditions by RGNST class.The matrices are calculated from, and for the WC variant.
+
+IF        10
+CYCLE GE 1
+THEN
+
+Compute            0
+
+_SFMR=LinInt(RGNST, 11, 12, 13, 21, 22, 23, 31, 32, 33, 41, 42, 43, 51, 52, 53, &
+                   281, 178, 550, 47, 129, 273, 25, 76, 126, 25, 32, 50, 25, 25, 44)
+
+_WFMR=LinInt(RGNST, 11, 12, 13, 21, 22, 23, 31, 32, 33, 41, 42, 43, 51, 52, 53, &
+                   192, 70, 112, 29, 99, 81, 25, 50, 66, 25, 33, 44, 25, 25, 25)
+
+_GFMR=LinInt(RGNST, 11, 12, 13, 21, 22, 23, 31, 32, 33, 41, 42, 43, 51, 52, 53, &
+                   25, 300, 25, 25, 77, 97, 25, 27, 29, 25, 25, 25, 25, 25, 25)
+
+_AFMR=LinInt(RGNST, 11, 12, 13, 21, 22, 23, 31, 32, 33, 41, 42, 43, 51, 52, 53, &
+                   379, 167, 86, 34, 87, 171, 25, 34, 27, 25, 25, 25, 25, 25, 25)
+
+_RFMR=LinInt(RGNST, 11, 12, 13, 21, 22, 23, 31, 32, 33, 41, 42, 43, 51, 52, 53, &
+                   25, 160, 656, 100, 123, 87, 25, 33, 25, 25, 25, 25, 25, 25, 25)
+
+_NFMR=LinInt(RGNST, 11, 12, 13, 21, 22, 23, 31, 32, 33, 41, 42, 43, 51, 52, 53, &
+                   36, 94, 72, 25, 63, 37, 25, 25, 25, 25, 25, 25, 25, 25, 25)
+
+_YCMR=LinInt(RGNST, 11, 12, 13, 21, 22, 23, 31, 32, 33, 41, 42, 43, 51, 52, 53, &
+                   450, 1199, 250, 50, 202, 312, 25, 25, 77, 25, 25, 65, 25, 25, 25)
+
+_ICMR=LinInt(RGNST, 11, 12, 13, 21, 22, 23, 31, 32, 33, 41, 42, 43, 51, 52, 53, &
+                   25, 25, 75, 25, 60, 73, 25, 25, 37, 25, 25, 40, 25, 25, 25)
+
+_LPMR=LinInt(RGNST, 11, 12, 13, 21, 22, 23, 31, 32, 33, 41, 42, 43, 51, 52, 53, &
+                   200, 571, 225, 52, 146, 39, 25, 25, 25, 25, 25, 25, 25, 37, 25)
+
+_WPMR=LinInt(RGNST, 11, 12, 13, 21, 22, 23, 31, 32, 33, 41, 42, 43, 51, 52, 53, &
+                   25, 25, 46, 50, 36, 65, 25, 25, 25, 25, 25, 25, 25, 25, 25)
+
+_DFMR=LinInt(RGNST, 11, 12, 13, 21, 22, 23, 31, 32, 33, 41, 42, 43, 51, 52, 53, &
+                   102, 199, 327, 25, 51, 121, 25, 25, 26, 25, 25, 25, 25, 25, 25)
+
+_RCMR=LinInt(RGNST, 11, 12, 13, 21, 22, 23, 31, 32, 33, 41, 42, 43, 51, 52, 53, &
+                   25, 25, 212, 25, 25, 79, 25, 25, 45, 25, 25, 25, 25, 25, 25)
+
+_WHMR=LinInt(RGNST, 11, 12, 13, 21, 22, 23, 31, 32, 33, 41, 42, 43, 51, 52, 53, &
+                   50, 167, 662, 25, 32, 218, 25, 25, 82, 25, 25, 54, 25, 25, 31)
+
+_MHMR=LinInt(RGNST, 11, 12, 13, 21, 22, 23, 31, 32, 33, 41, 42, 43, 51, 52, 53, &
+                   37, 282, 478, 25, 66, 104, 25, 25, 65, 25, 25, 47, 25, 25, 25)
+
+_BMMR=LinInt(RGNST, 11, 12, 13, 21, 22, 23, 31, 32, 33, 41, 42, 43, 51, 52, 53, &
+                   25, 25, 1499, 25, 73, 85, 25, 25, 32, 25, 25, 25, 25, 25, 25)
+
+_RAMR=LinInt(RGNST, 11, 12, 13, 21, 22, 23, 31, 32, 33, 41, 42, 43, 51, 52, 53, &
+                   25, 25, 191, 25, 34, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25)
+
+END
+ENDIF
+
+********************************************************************************
+*Tally species-specific observed small sapling counts and adjust expected regen                               
+********************************************************************************
+*SpCount Adds up the number of unique species in the stand with seed source present (> 0 TPA where DBH GE 5 inches AND HT GE 10 feet).
+*The total number of small saplings observed on the condition (SAPALL) are divided by the number of seed source species present (SpCount)
+*Then expected mean regen by species (e.g., lodgepole pine; LPMR) is subtracted from the above number (LPMR - (SAPALL/SpCount).
+*This process prevents adding regen into a stand when it is already fully stocked for its structural state (RGNST class)
+
+IF        10
+CYCLE GE 1
+THEN
+
+Compute            0
+
+SAPALL=SpMcDBH(1,All,0,1.00,3.0,0,500.0,0)
+_SAPSF=SpMcDBH(1,SF,0,1.00,3.0,0,500.0,0)
+_SAPWF=SpMcDBH(1,WF,0,1.00,3.0,0,500.0,0)
+_SAPGF=SpMcDBH(1,GF,0,1.00,3.0,0,500.0,0)
+_SAPAF=SpMcDBH(1,AF,0,1.00,3.0,0,500.0,0)
+_SAPRF=SpMcDBH(1,RF,0,1.00,3.0,0,500.0,0)
+_SAPNF=SpMcDBH(1,NF,0,1.00,3.0,0,500.0,0)
+_SAPYC=SpMcDBH(1,YC,0,1.00,3.0,0,500.0,0)
+_SAPIC=SpMcDBH(1,IC,0,1.00,3.0,0,500.0,0)
+_SAPLP=SpMcDBH(1,LP,0,1.00,3.0,0,500.0,0)
+_SAPWP=SpMcDBH(1,WP,0,1.00,3.0,0,500.0,0)
+_SAPDF=SpMcDBH(1,DF,0,1.00,3.0,0,500.0,0)
+_SAPRC=SpMcDBH(1,RC,0,1.00,3.0,0,500.0,0)
+_SAPWH=SpMcDBH(1,WH,0,1.00,3.0,0,500.0,0)
+_SAPMH=SpMcDBH(1,MH,0,1.00,3.0,0,500.0,0)
+_SAPBM=SpMcDBH(1,BM,0,1.00,3.0,0,500.0,0)
+_SAPRA=SpMcDBH(1,RA,0,1.00,3.0,0,500.0,0)
+
+_SF=LinInt(SpMcDBH(1,SF,0,5.0,999,10.0,999,0), 0.001, 0.001, 0, 1)
+_WF=LinInt(SpMcDBH(1,WF,0,5.0,999,10.0,999,0), 0.001, 0.001, 0, 1)
+_GF=LinInt(SpMcDBH(1,GF,0,5.0,999,10.0,999,0), 0.001, 0.001, 0, 1)
+_AF=LinInt(SpMcDBH(1,AF,0,5.0,999,10.0,999,0), 0.001, 0.001, 0, 1)
+_RF=LinInt(SpMcDBH(1,RF,0,5.0,999,10.0,999,0), 0.001, 0.001, 0, 1)
+_NF=LinInt(SpMcDBH(1,NF,0,5.0,999,10.0,999,0), 0.001, 0.001, 0, 1)
+_YC=LinInt(SpMcDBH(1,YC,0,5.0,999,10.0,999,0), 0.001, 0.001, 0, 1)
+_IC=LinInt(SpMcDBH(1,IC,0,5.0,999,10.0,999,0), 0.001, 0.001, 0, 1)
+_LP=LinInt(SpMcDBH(1,LP,0,5.0,999,10.0,999,0), 0.001, 0.001, 0, 1)
+_WP=LinInt(SpMcDBH(1,WP,0,5.0,999,10.0,999,0), 0.001, 0.001, 0, 1)
+_DF=LinInt(SpMcDBH(1,DF,0,5.0,999,10.0,999,0), 0.001, 0.001, 0, 1)
+_RC=LinInt(SpMcDBH(1,RC,0,5.0,999,10.0,999,0), 0.001, 0.001, 0, 1)
+_WH=LinInt(SpMcDBH(1,WH,0,5.0,999,10.0,999,0), 0.001, 0.001, 0, 1)
+_MH=LinInt(SpMcDBH(1,MH,0,5.0,999,10.0,999,0), 0.001, 0.001, 0, 1)
+_BM=LinInt(SpMcDBH(1,BM,0,5.0,999,10.0,999,0), 0.001, 0.001, 0, 1)
+_RA=LinInt(SpMcDBH(1,RA,0,5.0,999,10.0,999,0), 0.001, 0.001, 0, 1)
+
+SpCount=_SF+_WF+_GF+_AF+_RF+_NF+_YC+_IC+_LP+_WP+_DF+_RC+_WH+_MH+_BM+_RA
+
+_SFMRA=MAX(0,(_SFMR - (SAPALL/SpCount)))
+_WFMRA=MAX(0,(_WFMR - (SAPALL/SpCount)))
+_GFMRA=MAX(0,(_GFMR - (SAPALL/SpCount)))
+_AFMRA=MAX(0,(_AFMR - (SAPALL/SpCount)))
+_RFMRA=MAX(0,(_RFMR - (SAPALL/SpCount)))
+_NFMRA=MAX(0,(_NFMR - (SAPALL/SpCount)))
+_YCMRA=MAX(0,(_YCMR - (SAPALL/SpCount)))
+_ICMRA=MAX(0,(_ICMR - (SAPALL/SpCount)))
+_LPMRA=MAX(0,(_LPMR - (SAPALL/SpCount)))
+_WPMRA=MAX(0,(_WPMR - (SAPALL/SpCount)))
+_DFMRA=MAX(0,(_DFMR - (SAPALL/SpCount)))
+_RCMRA=MAX(0,(_RCMR - (SAPALL/SpCount)))
+_WHMRA=MAX(0,(_WHMR - (SAPALL/SpCount)))
+_MHMRA=MAX(0,(_MHMR - (SAPALL/SpCount)))
+_BMMRA=MAX(0,(_BMMR - (SAPALL/SpCount)))
+_RAMRA=MAX(0,(_RAMR - (SAPALL/SpCount)))
+
+RegTotal = 0
+
+END
+ENDIF
+********************************************************************************
+*Add species-level regeneration into simulation, if appropriate
+*(SF, WF, GF, AF, RF, NF, YC, IC, LP, WP, DF, RC, WH, MH, BM, RA)                                          
+********************************************************************************
+*Species with few empirical regen observations in the variant-level FIA sample are not added due to uncertainty
+*Regen statements are evaluated every FVS cycle by default, based on setting the REGTRIG variable value to 1
+*User's can modify when the regen statements are evaluated by changing the REGTRIG conditional statement below
+*Assuming 10yr FVS cycles, small sapling regen is added into the stand in the following FVS Cycle
+*(i.e., ~10 years after assessment of the stand's capacity to support new natural tree establishment)
+
+*Consolidates scheduled tree regen (TPA) into fewer unique tree records in the treelist - reduces output file size
+ESTAB
+MINPLOTS          20
+END
+
+*Edit your simulation cycle length below if different from 10 year default for REGENAGE variable
+*REGENAGE sets the age of regen trees added into the simulation in the following cycle
+*This will vary depending on your cycle length (e.g., 10 year cycle assumes 8 year old regen trees)
+
+Compute            0
+REGTRIG = 0
+REGENAGE = 10 - 2
+END
+
+IF        10
+CYCLE GE 1
+THEN
+
+Compute            0
+REGTRIG = 1
+END
+ENDIF
+
+** Pacific silver fir
+IF        10
+SpMcDBH(11,ALL,0,1.0,999,0,999,0) LE BSDIMAX*0.75 AND SpMcDBH(1,SF,0,5,999,10,999,0) GT 0.001 AND REGTRIG EQ 1
+Then
+Estab
+Natural            1    Parms(SF, _SFMRA, 100, REGENAGE, 0, 0)
+End
+Compute            1
+RegTotal = Regtotal + _SFMRA
+End
+EndIf
+
+** white fir
+IF        10
+SpMcDBH(11,ALL,0,1.0,999,0,999,0) LE BSDIMAX*0.75 AND SpMcDBH(1,WF,0,5,999,10,999,0) GT 0.001 AND REGTRIG EQ 1
+Then
+Estab
+Natural            1    Parms(WF, _WFMRA, 100, REGENAGE, 0, 0)
+End
+Compute            1
+RegTotal = Regtotal + _WFMRA
+End
+EndIf
+
+** grand fir
+IF        10
+SpMcDBH(11,ALL,0,1.0,999,0,999,0) LE BSDIMAX*0.75 AND SpMcDBH(1,GF,0,5,999,10,999,0) GT 0.001 AND REGTRIG EQ 1
+Then
+Estab
+Natural            1    Parms(GF, _GFMRA, 100, REGENAGE, 0, 0)
+End
+Compute            1
+RegTotal = Regtotal + _GFMRA
+End
+EndIf
+
+** subalpine fir
+IF        10
+SpMcDBH(11,ALL,0,1.0,999,0,999,0) LE BSDIMAX*0.75 AND SpMcDBH(1,AF,0,5,999,10,999,0) GT 0.001 AND REGTRIG EQ 1
+Then
+Estab
+Natural            1    Parms(AF, _AFMRA, 100, REGENAGE, 0, 0)
+End
+Compute            1
+RegTotal = Regtotal + _AFMRA
+End
+EndIf
+
+** red fir
+IF        10
+SpMcDBH(11,ALL,0,1.0,999,0,999,0) LE BSDIMAX*0.75 AND SpMcDBH(1,RF,0,5,999,10,999,0) GT 0.001 AND REGTRIG EQ 1
+Then
+Estab
+Natural            1    Parms(RF, _RFMRA, 100, REGENAGE, 0, 0)
+End
+Compute            1
+RegTotal = Regtotal + _RFMRA
+End
+EndIf
+
+** noble fir
+IF        10
+SpMcDBH(11,ALL,0,1.0,999,0,999,0) LE BSDIMAX*0.75 AND SpMcDBH(1,NF,0,5,999,10,999,0) GT 0.001 AND REGTRIG EQ 1
+Then
+Estab
+Natural            1    Parms(NF, _NFMRA, 100, REGENAGE, 0, 0)
+End
+Compute            1
+RegTotal = Regtotal + _NFMRA
+End
+EndIf
+
+** alaska cedar
+IF        10
+SpMcDBH(11,ALL,0,1.0,999,0,999,0) LE BSDIMAX*0.75 AND SpMcDBH(1,YC,0,5,999,10,999,0) GT 0.001 AND REGTRIG EQ 1
+Then
+Estab
+Natural            1    Parms(YC, _YCMRA, 100, REGENAGE, 0, 0)
+End
+Compute            1
+RegTotal = Regtotal + _YCMRA
+End
+EndIf
+
+** incense cedar
+IF        10
+SpMcDBH(11,ALL,0,1.0,999,0,999,0) LE BSDIMAX*0.75 AND SpMcDBH(1,IC,0,5,999,10,999,0) GT 0.001 AND REGTRIG EQ 1
+Then
+Estab
+Natural            1    Parms(IC, _ICMRA, 100, REGENAGE, 0, 0)
+End
+Compute            1
+RegTotal = Regtotal + _ICMRA
+End
+EndIf
+
+** lodgepole pine
+IF        10
+SpMcDBH(11,ALL,0,1.0,999,0,999,0) LE BSDIMAX*0.75 AND SpMcDBH(1,LP,0,5,999,10,999,0) GT 0.001 AND REGTRIG EQ 1
+Then
+Estab
+Natural            1    Parms(LP, _LPMRA, 100, REGENAGE, 0, 0)
+End
+Compute            1
+RegTotal = Regtotal + _LPMRA
+End
+EndIf
+
+** western white pine
+IF        10
+SpMcDBH(11,ALL,0,1.0,999,0,999,0) LE BSDIMAX*0.75 AND SpMcDBH(1,WP,0,5,999,10,999,0) GT 0.001 AND REGTRIG EQ 1
+Then
+Estab
+Natural            1    Parms(WP, _WPMRA, 100, REGENAGE, 0, 0)
+End
+Compute            1
+RegTotal = Regtotal + _WPMRA
+End
+EndIf
+
+** Douglas-fir
+IF        10
+SpMcDBH(11,ALL,0,1.0,999,0,999,0) LE BSDIMAX*0.75 AND SpMcDBH(1,DF,0,5,999,10,999,0) GT 0.001 AND REGTRIG EQ 1
+Then
+Estab
+Natural            1    Parms(DF, _DFMRA, 100, REGENAGE, 0, 0)
+End
+Compute            1
+RegTotal = Regtotal + _DFMRA
+End
+EndIf
+
+** western redcedar
+IF        10
+SpMcDBH(11,ALL,0,1.0,999,0,999,0) LE BSDIMAX*0.75 AND SpMcDBH(1,RC,0,5,999,10,999,0) GT 0.001 AND REGTRIG EQ 1
+Then
+Estab
+Natural            1    Parms(RC, _RCMRA, 100, REGENAGE, 0, 0)
+End
+Compute            1
+RegTotal = Regtotal + _RCMRA
+End
+EndIf
+
+** western hemlock
+IF        10
+SpMcDBH(11,ALL,0,1.0,999,0,999,0) LE BSDIMAX*0.75 AND SpMcDBH(1,WH,0,5,999,10,999,0) GT 0.001 AND REGTRIG EQ 1
+Then
+Estab
+Natural            1    Parms(WH, _WHMRA, 100, REGENAGE, 0, 0)
+End
+Compute            1
+RegTotal = Regtotal + _WHMRA
+End
+EndIf
+
+** mountain hemlock
+IF        10
+SpMcDBH(11,ALL,0,1.0,999,0,999,0) LE BSDIMAX*0.75 AND SpMcDBH(1,MH,0,5,999,10,999,0) GT 0.001 AND REGTRIG EQ 1
+Then
+Estab
+Natural            1    Parms(MH, _MHMRA, 100, REGENAGE, 0, 0)
+End
+Compute            1
+RegTotal = Regtotal + _MHMRA
+End
+EndIf
+
+** bigleaf maple
+IF        10
+SpMcDBH(11,ALL,0,1.0,999,0,999,0) LE BSDIMAX*0.75 AND SpMcDBH(1,BM,0,5,999,10,999,0) GT 0.001 AND REGTRIG EQ 1
+Then
+Estab
+Natural            1    Parms(BM, _BMMRA, 100, REGENAGE, 0, 0)
+End
+Compute            1
+RegTotal = Regtotal + _BMMRA
+End
+EndIf
+
+** red alder
+IF        10
+SpMcDBH(11,ALL,0,1.0,999,0,999,0) LE BSDIMAX*0.75 AND SpMcDBH(1,RA,0,5,999,10,999,0) GT 0.001 AND REGTRIG EQ 1
+Then
+Estab
+Natural            1    Parms(RA, _RAMRA, 100, REGENAGE, 0, 0)
+End
+Compute            1
+RegTotal = Regtotal + _RAMRA
+End
+EndIf
+

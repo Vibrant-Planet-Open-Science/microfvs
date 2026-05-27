@@ -56,12 +56,24 @@ class FvsVariant(StrEnum):
     WC = ("WC", "Westside Cascades")
     WS = ("WS", "Western Sierra Nevada")
 
-    def __new__(cls, value: str, description: str):
+    def __new__(cls, *args):
         """Create a new FvsVariant."""
-        obj = str.__new__(cls, value)
-        obj._value_ = value
-        obj.description = description
+        obj = str.__new__(cls, args[0])
+        obj._value_ = args[0]
         return obj
+
+    def __init__(self, *args):
+        """Initialize a new FvsVariant."""
+        self.code = args[0]
+        self.description = args[1]
+
+    @classmethod
+    def _missing_(cls, value: object):
+        """Handle missing values."""
+        for member in cls:
+            if member.code.casefold() == str(value).casefold():
+                return member
+        return super()._missing_(value)
 
 
 class FvsOutputTableName(StrEnum):
