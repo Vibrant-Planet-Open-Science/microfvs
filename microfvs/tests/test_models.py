@@ -112,7 +112,7 @@ def test_fvs_result(tmp_path):
         f.write(keyfile.content)
 
     cmd = [
-        f"/usr/local/bin/FVS{keyfile.fvs_variant.lower()}",
+        f"FVS{keyfile.fvs_variant.lower()}",
         f"--keywordfile={keyfile_path}",
     ]
     proc = subprocess.run(cmd, capture_output=True, cwd=tmp_path)
@@ -564,7 +564,7 @@ _FVS_RESULT_ATTRS = {
     "treatment": "NONE",
     "disturbance": "NONE",
     "keyfile": "STDIDENT\n99999\nSTOP\n",
-    "command": "/usr/local/bin/FVSca --keywordfile=test.key",
+    "command": "FVSca --keywordfile=test.key",
     "return_code": 0,
     "stdout": None,
     "stderr": None,

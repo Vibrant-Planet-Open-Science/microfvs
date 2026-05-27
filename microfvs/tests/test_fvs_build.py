@@ -31,7 +31,7 @@ def test_fvs_build(variant: FvsVariant, tmp_path: Path):
       tmp_path (Generator[Path]): a Pytest automatically-inserted
         "fixture", generates a temporary path
     """
-    fvs = f"/usr/local/bin/FVS{variant.lower()}"
+    fvs = f"FVS{variant.lower()}"
 
     keyfile = f"{tmp_path}/{variant}_buildtest.key"
     keyfile_content = (
