@@ -79,19 +79,23 @@ def run_fvs(
     with tempfile.TemporaryDirectory() as temp_dir:
         db_path = os.path.join(temp_dir, FVS_DATABASE_NAME)
         conn = sqlite3.connect(db_path)
+        try:
+            stand_data = stand_init.to_dataframe()
 
-        stand_data = stand_init.to_dataframe()
+            fvs_variant = stand_init.variant
+            stand_id = stand_init.stand_id
 
-        fvs_variant = stand_init.variant
-        stand_id = stand_init.stand_id
-
-        stand_data.to_sql(
-            "fvs_standinit", conn, if_exists="replace", index=False
-        )
-        tree_data = tree_init_df.loc[
-            tree_init_df[STAND_ID_COLUMN_NAME] == stand_id
-        ]
-        tree_data.to_sql("fvs_treeinit", conn, if_exists="replace", index=False)
+            stand_data.to_sql(
+                "fvs_standinit", conn, if_exists="replace", index=False
+            )
+            tree_data = tree_init_df.loc[
+                tree_init_df[STAND_ID_COLUMN_NAME] == stand_id
+            ]
+            tree_data.to_sql(
+                "fvs_treeinit", conn, if_exists="replace", index=False
+            )
+        finally:
+            conn.close()
 
         keyfile_args: dict = {
             "variant": fvs_variant,

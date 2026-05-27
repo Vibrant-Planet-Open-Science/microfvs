@@ -3,12 +3,12 @@ from __future__ import annotations
 import errno
 import os
 import warnings
-from pathlib import Path
 
 import pandas as pd
 import sqlalchemy as db
 from pandas._typing import DtypeArg
 from sqlalchemy.engine.base import Engine
+from sqlalchemy.engine.url import URL
 
 from microfvs.enums import FvsOutputTableName
 from microfvs.utils.stand_stock import (
@@ -31,8 +31,7 @@ def get_sqlite_engine(path_to_db: str | os.PathLike) -> Engine:
     if not os.path.exists(path):
         raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), path)
 
-    path = Path(path)
-    return db.create_engine(f"sqlite:////{path}")
+    return db.create_engine(URL.create("sqlite", database=path))
 
 
 class SqliteScraper:
@@ -85,7 +84,11 @@ class SqliteScraper:
         Returns:
             dict with table names as keys and DataFrames as values.
         """
-        return cls._scrape_engine(get_sqlite_engine(path_to_db), dtype=dtype)
+        engine = get_sqlite_engine(path_to_db)
+        try:
+            return cls._scrape_engine(engine, dtype=dtype)
+        finally:
+            engine.dispose()
 
 
 class FvsSqliteScraper(SqliteScraper):
