@@ -7,10 +7,10 @@ from microfvs.enums import FvsVariant
 
 def get_fvs_version(variant: FvsVariant) -> str:
     """Gets the version of FVS for a given variant."""
-    if os.path.exists(f"/usr/local/bin/FVS{variant.lower()}"):
+    if os.path.exists(f"FVS{variant.lower()}"):
         with tempfile.TemporaryDirectory() as temp_dir:
             proc = subprocess.Popen(
-                f"/usr/local/bin/FVS{variant.lower()}",
+                f"FVS{variant.lower()}",
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,

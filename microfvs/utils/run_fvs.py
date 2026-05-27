@@ -110,7 +110,7 @@ def run_fvs(
             f.write(keyfile.content)
 
         cmd = [
-            f"/usr/local/bin/FVS{keyfile.fvs_variant.lower()}",
+            f"FVS{keyfile.fvs_variant.lower()}",
             f"--keywordfile={keyfile.name}.key",
         ]
         process = subprocess.run(cmd, capture_output=True, cwd=temp_dir)
