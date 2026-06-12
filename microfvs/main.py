@@ -56,14 +56,15 @@ async def template_render_error_handler(
 
 
 @app.get("/", response_class=HTMLResponse)
-def read_html() -> str:
+def read_html(request: Request) -> str:
     """Returns a simple HTML page confirming MicroFVS is running."""
-    return """
+    docs_url = request.scope.get("root_path", "") + "/docs"
+    return f"""
     <html>
         <body>
             <h1>MicroFVS is running!</h1>
             <p>This is a simple web service for running FVS simulations.</p>
-            <p>To get started, go to the <a href="/docs">API documentation</a>.</p>
+            <p>To get started, go to the <a href="{docs_url}">API documentation</a>.</p>
         </body>
     </html>
     """
