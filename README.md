@@ -32,14 +32,43 @@ docker build --target microfvs --build-arg FVS_TAG=latest -t microfvs .
 ```
 
 ### Run the API locally inside the Docker container
-The Docker container running the MicroFVS server should be accessible on port 80, you'll need to forward that to your local machine to be able to communicate with the MicroFVS service. To forward to localhost 8080, for example:
-`docker run -p 8080:80 microfvs`
+The Docker container running the MicroFVS server listens on port 80. Forward that to your local machine to communicate with the service—for example:
+
+```bash
+docker run -p 8080:80 microfvs
+```
+
+The container starts Uvicorn with `--root-path /microfvs`, matching typical reverse-proxy deployments. Uvicorn does **not** infer this from `X-Forwarded-Prefix`; it is set in the image `CMD`.
+
+To run at the site root instead (for example a quick local smoke test without nginx), override the command:
+
+```bash
+docker run -p 8080:80 microfvs uvicorn microfvs.main:app --host 0.0.0.0 --port 80
+```
 
 ### Open a web browser and explore the documentation
-Use your web browser to go to the URL `http://localhost:<your-port>/docs` and you should the auto-generated FastAPI documentation for the MicroFVS web service. 
+With the default `/microfvs` root path, access the docs through a reverse proxy at `http://localhost:<your-port>/microfvs/docs` (see below), or on a host where the service is mounted at that prefix—for example `https://example.org/microfvs/docs`.
+
+If you overrode the command to run at the site root, use `http://localhost:<your-port>/docs` instead.
+
+### Reverse proxy (recommended for local and production)
+When the proxy **strips** the path prefix before forwarding requests to MicroFVS (the usual nginx pattern), Uvicorn's `--root-path` must match the external prefix. That keeps the OpenAPI/Swagger UI and the landing-page link to `/docs` working under the prefix.
+
+**Example nginx location** (prefix stripped before the app sees the request):
+
+```nginx
+location /microfvs/ {
+    proxy_pass http://127.0.0.1:8080/;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+```
+
+With this setup, clients reach `https://example.org/microfvs/docs`; nginx forwards `/docs` to the container. Do not hit the container directly at `/docs` while `--root-path` is set—the Swagger UI expects the prefixed URL.
 
 ### Utilize the web service
-Once the web service is up-and-running inside your Docker container, you should be able to interact with it by making requests to the MicroFVS endpoints using the pattern `http://localhost:<your-port>/<endpoint>` along with any parameters that might be involved in making GET or POST requests using the API. You should be able to launch example requests from the documentation page, or from your favorite programming language that can prepare web requests like Python or R. Stay tuned as we develop wrappers for the API to make access from Python and R simpler. 
+Once the web service is up-and-running, interact with endpoints using the external URL pattern—for example `https://example.org/microfvs/run` when the default root path is in effect, or `http://localhost:<your-port>/<endpoint>` when running at the site root locally. 
 
 
 ## Development
@@ -54,7 +83,7 @@ To run the API locally inside the dev container (port 8000 is forwarded automati
 uv run uvicorn microfvs.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-Then open `http://localhost:8000/docs` on your machine.
+Then open `http://localhost:8000/docs` on your machine. The dev container serves at the site root for convenience; the production Docker image uses `--root-path /microfvs` intended for use behind a reverse proxy.
 
 If you don't want to use a dev container, install dev dependencies and hooks the same way before opening a pull request:
 
