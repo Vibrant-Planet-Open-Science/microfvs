@@ -10,6 +10,7 @@ import pytest
 from microfvs.enums import FvsVariant
 
 
+@pytest.mark.fvs
 @pytest.mark.parametrize("variant", FvsVariant)
 def test_fvs_build(variant: FvsVariant, tmp_path: Path):
     """

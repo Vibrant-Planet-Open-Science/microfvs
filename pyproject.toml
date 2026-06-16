@@ -14,23 +14,24 @@ license-files = ["LICENSE"]
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "fastapi==0.135.2",
-    "jinja2==3.1.6",
-    "pandas==3.0.1",
-    "pydantic==2.12.5",
-    "sqlalchemy==2.0.48",
-    "uvicorn==0.42.0",
+    "fastapi",
+    "jinja2",
+    "pandas",
+    "pydantic",
+    "sqlalchemy",
+    "uvicorn",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "ipykernel==7.2.0",
+    "httpx2",
+    "ipykernel",
     "mypy==2.1.0",
-    "nbval==0.11.0",
-    "pre-commit==4.6.0",
-    "pytest-mock==3.15.1",
-    "pytest==9.0.3",
-    "requests==2.33.1",
+    "nbval",
+    "pre-commit",
+    "pytest-mock",
+    "pytest",
+    "requests",
     "ruff==0.15.13",
 ]
 
@@ -101,3 +102,6 @@ convention = "google"
 mypy_path = "microfvs"
 files = "microfvs"
 plugins = "sqlalchemy.ext.mypy.plugin"
+
+[tool.pytest.ini_options]
+markers = ["fvs: tests that invoke the FVS CLI"]
