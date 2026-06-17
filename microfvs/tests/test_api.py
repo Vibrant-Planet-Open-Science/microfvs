@@ -27,6 +27,16 @@ def test_root(client):
     assert "MicroFVS" in response.text
 
 
+def test_gzip_compression(client):
+    tiny_response = client.get("/healthcheck")
+    assert tiny_response.status_code == 200
+    assert tiny_response.headers.get("content-encoding") is None
+
+    large_response = client.get("/template")
+    assert large_response.status_code == 200
+    assert large_response.headers.get("content-encoding") == "gzip"
+
+
 # ----------------------------------------------------------------------
 # /version
 # ----------------------------------------------------------------------

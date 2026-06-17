@@ -4,6 +4,7 @@ import importlib.resources
 from typing import Annotated
 
 from fastapi import Body, FastAPI, HTTPException, Request
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 
 from microfvs.constants import (
@@ -35,6 +36,8 @@ from microfvs.utils.template_helpers import (
 )
 
 app = FastAPI()
+# enable gzip compression for responses
+app.add_middleware(GZipMiddleware, minimum_size=1024)
 
 
 @app.get("/healthcheck", status_code=200)
