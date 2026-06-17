@@ -21,8 +21,8 @@ WORKDIR /code
 COPY pyproject.toml uv.lock /code/
 RUN uv sync --frozen --no-dev --no-install-project
 COPY microfvs /code/microfvs
-EXPOSE 80
-CMD ["uvicorn", "microfvs.main:app", "--host", "0.0.0.0", "--port", "80", "--root-path", "/microfvs"]
+EXPOSE 8080
+CMD ["uvicorn", "microfvs.main:app", "--host", "0.0.0.0", "--port", "8080", "--root-path", "/microfvs"]
 
 FROM fvs-python-base AS dev
 RUN apt-get update \

@@ -37,6 +37,12 @@ from microfvs.utils.template_helpers import (
 app = FastAPI()
 
 
+@app.get("/healthcheck", status_code=200)
+async def health_check() -> dict[str, str]:
+    """Health check for the load balancer target group. Returns 200."""
+    return {"status": "ok"}
+
+
 @app.exception_handler(FvsTemplateRenderError)
 async def template_render_error_handler(
     request: Request,  # noqa: ARG001
@@ -212,84 +218,6 @@ def run_fvs_single_stand(
         treatments=treatments,
         disturbances=disturbances,
         stand_stock_params=stand_stock_params,
-    )
-
-
-@app.post("/outfile", response_class=PlainTextResponse)
-def get_outfile(
-    stand_init: Annotated[
-        FvsStandInit,
-        Body(examples=[FvsStandInit.model_validate(TEST_STANDINIT_RECORDS[0])]),
-    ],
-    tree_init: Annotated[
-        FvsTreeInit,
-        Body(examples=[FvsTreeInit.from_records(TEST_TREEINIT_RECORDS)]),
-    ] = FvsTreeInit(),
-    template: Annotated[
-        str, Body(examples=[FvsKeyfileTemplate.DEFAULT])
-    ] = FvsKeyfileTemplate.DEFAULT,
-    template_params: Annotated[
-        dict, Body(examples=[{"num_cycles": 10, "cycle_length": 5}])
-    ] = {},
-    treatments: Annotated[
-        list[str | FvsEvent] | None,
-        Body(
-            examples=[
-                [EXAMPLE_TREATMENT_STR],
-                [FvsEvent.model_validate(EXAMPLE_TREATMENT_EVENT)],
-            ]
-        ),
-    ] = None,
-    disturbances: Annotated[
-        list[str | FvsEvent] | None,
-        Body(
-            examples=[
-                [EXAMPLE_DISTURBANCE_STR],
-                [FvsEvent.model_validate(EXAMPLE_DISTURBANCE_EVENT)],
-            ]
-        ),
-    ] = None,
-    stand_stock_params: FvsStandStockParams = FvsStandStockParams(),
-) -> str:
-    """Runs FVS and returns the OUT file.
-
-    If multiple stands are included in `stand_init`, only the outfile
-    from the first stand is returned.
-
-    Args:
-        stand_init (FvsStandInit): Stand initialization data for one or
-            more stands. All stands represented in stand_init will be
-            run in the order specified unless or until `limit` is
-            reached.
-        tree_init (FvsTreeInit, optional): Tree initialization data for
-            one or more stands. If not provided, bare ground will be
-            simulated.
-        template (str, optional): FVS keyfile template to use. Defaults
-            to FvsKeyfileTemplate.DEFAULT
-        template_params (dict, optional): Template variables to inject
-            (e.g. num_cycles, cycle_length, custom placeholders).
-        treatments (list[str | FvsEvent], optional): Treatment
-            events to inject into the keyfile. Accepts string keys
-            resolved via the event library, or explicit FvsEvent
-            objects.
-        disturbances (list[str | FvsEvent], optional): Disturbance
-            events to inject into the keyfile. Same coercion rules
-            as treatments.
-        stand_stock_params (FvsStandStockParams): Optional set of
-            parameters to govern the generation of a Stand and Stock
-            Table in the FVS outputs.
-    """
-    result = run_fvs(
-        stand_init=stand_init,
-        tree_init=tree_init,
-        template=template,
-        template_params=template_params,
-        treatments=treatments,
-        disturbances=disturbances,
-        stand_stock_params=stand_stock_params,
-    )
-    return (
-        result.outfile if isinstance(result, FvsResult) else result[0].outfile
     )
 
 

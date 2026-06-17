@@ -32,10 +32,10 @@ docker build --target microfvs --build-arg FVS_TAG=latest -t microfvs .
 ```
 
 ### Run the API locally inside the Docker container
-The Docker container running the MicroFVS server listens on port 80. Forward that to your local machine to communicate with the service—for example:
+The Docker container running the MicroFVS server listens on port 8080. Forward that to your local machine to communicate with the service—for example:
 
 ```bash
-docker run -p 8080:80 microfvs
+docker run -p 8080:8080 microfvs
 ```
 
 The container starts Uvicorn with `--root-path /microfvs`, matching typical reverse-proxy deployments. Uvicorn does **not** infer this from `X-Forwarded-Prefix`; it is set in the image `CMD`.
@@ -43,7 +43,7 @@ The container starts Uvicorn with `--root-path /microfvs`, matching typical reve
 To run at the site root instead (for example a quick local smoke test without nginx), override the command:
 
 ```bash
-docker run -p 8080:80 microfvs uvicorn microfvs.main:app --host 0.0.0.0 --port 80
+docker run -p 8080:8080 microfvs uvicorn microfvs.main:app --host 0.0.0.0 --port 8080
 ```
 
 ### Open a web browser and explore the documentation
@@ -77,13 +77,13 @@ A **dev container** is provided under [`.devcontainer/`](.devcontainer/) for VS 
 
 The `.venv` directory lives on your host via the bind-mounted workspace (Linux binaries from the container). You can delete it and re-run `uv sync --extra dev` to recreate.
 
-To run the API locally inside the dev container (port 8000 is forwarded automatically):
+To run the API locally inside the dev container:
 
 ```bash
-uv run uvicorn microfvs.main:app --host 0.0.0.0 --port 8000 --reload
+uv run uvicorn microfvs.main:app --host 0.0.0.0 --port 8080 --reload
 ```
 
-Then open `http://localhost:8000/docs` on your machine. The dev container serves at the site root for convenience; the production Docker image uses `--root-path /microfvs` intended for use behind a reverse proxy.
+Then open `http://localhost:8080/docs` on your machine. The dev container serves at the site root for convenience; the production Docker image uses `--root-path /microfvs` intended for use behind a reverse proxy.
 
 If you don't want to use a dev container, install dev dependencies and hooks the same way before opening a pull request:
 
