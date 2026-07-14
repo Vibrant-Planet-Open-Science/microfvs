@@ -83,7 +83,7 @@ On every push to `main`, the [`Publish Image`](.github/workflows/publish-image.y
 
 ### Tag scheme
 
-- `sha-<short-commit>` — immutable; one per merge to `main`. This is the tag production deployments pin to.
+- `sha-<short-commit>` — immutable; one per merge to `main`. This is the tag deployments pin to.
 - `latest` — moving pointer to the most recent `main` build.
 - `v*` git tags (if adopted) are published under the tag name as well.
 
@@ -91,9 +91,7 @@ On every push to `main`, the [`Publish Image`](.github/workflows/publish-image.y
 
 The image bakes in FVS binaries copied from `ghcr.io/vibrant-planet-open-science/usfs-fvs:<FVS_TAG>`. Both PR CI and the publish workflow pin `FVS_TAG` (currently `FS2026.1`). Newer FVS releases exist; bump the `FVS_TAG` env in both workflows deliberately in a dedicated PR so the change is reviewable.
 
-### Deployment
-
-This repository **only builds and pushes** — it never deploys to AWS. Deployment is pull-based and handled out-of-band in Vibrant Planet's internal infrastructure repository (`vbpt-infra`): roll a new build forward by bumping the `image_tag` variable for the `ecs/service/microfvs` stack (`stacks/orgs/vbpt/plat/{dev,prod}/us-west-2/microfvs.yaml`) to the desired `sha-<short-commit>` and applying it there.
+This repository only builds and publishes images; deployment is handled separately in Vibrant Planet's infrastructure repository.
 
 ## Development
 
