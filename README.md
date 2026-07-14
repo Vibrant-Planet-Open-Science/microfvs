@@ -71,6 +71,30 @@ With this setup, clients reach `https://example.org/microfvs/docs`; nginx forwar
 Once the web service is up-and-running, interact with endpoints using the external URL pattern—for example `https://example.org/microfvs/run` when the default root path is in effect, or `http://localhost:<your-port>/<endpoint>` when running at the site root locally. 
 
 
+## Published images
+
+On every push to `main`, the [`Publish Image`](.github/workflows/publish-image.yml) workflow builds the deployable `microfvs` Docker stage (linux/amd64) and, after the test suite and a runtime health check pass, pushes it to two registries:
+
+- **Public (open science):** `ghcr.io/vibrant-planet-open-science/microfvs` — pull without any credentials, mirroring the [`usfs-fvs`](https://ghcr.io/vibrant-planet-open-science/usfs-fvs) base image. Universities and other external users can run the service directly:
+  ```bash
+  docker run -p 8080:8080 ghcr.io/vibrant-planet-open-science/microfvs:latest
+  ```
+- **Private (Vibrant Planet deployment):** an Amazon ECR repository (`vibrant-planet/microfvs`, `us-west-2`) used by Vibrant Planet's hosted service.
+
+### Tag scheme
+
+- `sha-<short-commit>` — immutable; one per merge to `main`. This is the tag production deployments pin to.
+- `latest` — moving pointer to the most recent `main` build.
+- `v*` git tags (if adopted) are published under the tag name as well.
+
+### FVS version pinning
+
+The image bakes in FVS binaries copied from `ghcr.io/vibrant-planet-open-science/usfs-fvs:<FVS_TAG>`. Both PR CI and the publish workflow pin `FVS_TAG` (currently `FS2026.1`). Newer FVS releases exist; bump the `FVS_TAG` env in both workflows deliberately in a dedicated PR so the change is reviewable.
+
+### Deployment
+
+This repository **only builds and pushes** — it never deploys to AWS. Deployment is pull-based and handled out-of-band in Vibrant Planet's internal infrastructure repository (`vbpt-infra`): roll a new build forward by bumping the `image_tag` variable for the `ecs/service/microfvs` stack (`stacks/orgs/vbpt/plat/{dev,prod}/us-west-2/microfvs.yaml`) to the desired `sha-<short-commit>` and applying it there.
+
 ## Development
 
 A **dev container** is provided under [`.devcontainer/`](.devcontainer/) for VS Code and Cursor. Open the repository with **Dev Containers: Reopen in Container** to get the `dev` Docker target, Python tooling, and extensions preconfigured. On first open, `postCreateCommand` runs `uv sync --frozen --extra dev` (creating a project-local `.venv` in your clone, gitignored) and installs pre-commit hooks. After pulling changes that touch the Dockerfile or lockfile, **rebuild** the dev container (or run `uv sync --extra dev` manually).

@@ -1,0 +1,151 @@
+name: Publish Image
+
+# Builds the deployable MicroFVS image and pushes it to Vibrant Planet's private
+# ECR (for the ECS deployment) and to the public open-science GHCR registry.
+#
+# Runs ONLY on push to main and on version tags — never on pull_request. This is
+# a public repo; fork PRs must not be able to reach the OIDC role. PR CI
+# (pytest.yaml) stays build-only.
+#
+# The AWS role ARN (which embeds the account id) is NOT stored in this public
+# repo. Set it as the repository/org Actions secret AWS_ECR_PUSH_ROLE_ARN.
+# The ECR registry host is discovered at runtime from amazon-ecr-login.
+#
+# Both jobs are guarded to the upstream repository so a fork that pushes to its
+# own main runs nothing here (a fork has no access to our secrets or OIDC role
+# anyway; the guard just avoids a pointless failing run on their runners).
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+
+permissions:
+  id-token: write   # OIDC token for AWS AssumeRole
+  contents: read
+  packages: write   # push to GHCR
+
+concurrency:
+  group: publish-image-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  FVS_TAG: FS2026.1   # FS2026.2 exists — bump deliberately, keep the base image in sync with PR CI
+  AWS_REGION: us-west-2
+  ECR_REPOSITORY: vibrant-planet/microfvs
+  GHCR_IMAGE: ghcr.io/vibrant-planet-open-science/microfvs
+  LOCAL_IMAGE: microfvs:publish
+
+jobs:
+  # Gate: re-run the test suite post-merge (PR CI already ran it, but this
+  # guarantees nothing reaches a registry without passing tests).
+  test:
+    if: github.repository == 'Vibrant-Planet-Open-Science/microfvs'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: dev
+          tags: microfvs-ci:dev
+          load: true
+          build-args: FVS_TAG=${{ env.FVS_TAG }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Run tests inside dev image
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/workspaces/microfvs" \
+            -w /workspaces/microfvs \
+            -e PYTHONPATH=/workspaces/microfvs \
+            microfvs-ci:dev \
+            bash -c 'uv sync --frozen --extra dev && uv run pytest .'
+
+  publish:
+    needs: test
+    if: github.repository == 'Vibrant-Planet-Open-Science/microfvs'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: docker/setup-buildx-action@v3
+
+      # Build the deployable image once (linux/amd64 for ECS Fargate) and load
+      # it locally so we can smoke-test the exact artifact we push.
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: microfvs
+          platforms: linux/amd64
+          tags: ${{ env.LOCAL_IMAGE }}
+          load: true
+          build-args: FVS_TAG=${{ env.FVS_TAG }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke test runtime image
+        run: |
+          set -euo pipefail
+          docker run -d --rm -p 8080:8080 --name microfvs-smoke "${LOCAL_IMAGE}"
+          ok=
+          for _ in $(seq 30); do
+            if curl -fsS http://localhost:8080/healthcheck >/dev/null; then
+              ok=1; break
+            fi
+            sleep 2
+          done
+          docker logs microfvs-smoke || true
+          docker rm -f microfvs-smoke >/dev/null 2>&1 || true
+          if [ -z "${ok}" ]; then
+            echo "healthcheck did not become ready" >&2
+            exit 1
+          fi
+          echo "healthcheck ok"
+
+      - name: Compute image tags
+        id: meta
+        run: |
+          set -euo pipefail
+          short_sha="$(git rev-parse --short=7 HEAD)"
+          tags="sha-${short_sha} latest"
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            tags="${tags} ${GITHUB_REF_NAME}"
+          fi
+          echo "short_sha=${short_sha}" >> "${GITHUB_OUTPUT}"
+          echo "tags=${tags}" >> "${GITHUB_OUTPUT}"
+          echo "Publishing tags: ${tags}"
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ECR_PUSH_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Tag and push to ECR and GHCR
+        env:
+          ECR_IMAGE: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}
+          TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          set -euo pipefail
+          for repo in "${ECR_IMAGE}" "${GHCR_IMAGE}"; do
+            for tag in ${TAGS}; do
+              docker tag "${LOCAL_IMAGE}" "${repo}:${tag}"
+              docker push "${repo}:${tag}"
+            done
+          done
