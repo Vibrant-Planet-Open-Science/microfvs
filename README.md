@@ -75,7 +75,7 @@ Once the web service is up-and-running, interact with endpoints using the extern
 
 Versioning is automated with [Release Please](https://github.com/googleapis/release-please). You don't tag or bump versions by hand:
 
-1. Merge PRs to `main` as usual. Because this repo squash-merges, the **PR title becomes the commit subject** and must follow [Conventional Commits](https://www.conventionalcommits.org/) (enforced by the `Lint PR Title` check).
+1. Merge PRs to `main` as usual. Because this repo squash-merges, the **PR title becomes the commit subject** and must follow [Conventional Commits](https://www.conventionalcommits.org/) (enforced by the `Validate PR Title` check).
 2. Release Please keeps an open **"Release PR"** that accumulates the changelog and the next semver version.
 3. Merging that Release PR creates the GitHub release + git tag and triggers the image build-and-publish.
 
