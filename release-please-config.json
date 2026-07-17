@@ -7,7 +7,7 @@
       "package-name": "microfvs",
       "include-component-in-tag": false,
       "bump-minor-pre-major": true,
-      "changelog-sections": [
+"bump-patch-for-minor-pre-major": true,    "changelog-sections": [
         { "type": "feat", "section": "Features" },
         { "type": "fix", "section": "Bug Fixes" },
         { "type": "perf", "section": "Performance Improvements" },
