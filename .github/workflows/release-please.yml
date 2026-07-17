@@ -33,7 +33,6 @@ env:
 
 jobs:
   release-please:
-    if: github.repository == 'Vibrant-Planet-Open-Science/microfvs'
     runs-on: ubuntu-latest
     permissions:
       contents: write        # create the release + tag, commit the Release PR
