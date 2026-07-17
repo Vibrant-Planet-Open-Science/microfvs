@@ -25,7 +25,6 @@
                 "charliermarsh.ruff",
                 "github.vscode-github-actions",
                 "github.vscode-pull-request-github",
-                "johnpapa.vscode-peacock",
                 "ms-azuretools.vscode-docker",
                 "ms-python.mypy-type-checker",
                 "ms-python.python",

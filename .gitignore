@@ -1,6 +1,6 @@
 .ci-changed-notebooks
 __pycache__/
-.devcontainer/
+.devcontainer/devcontainer.local.json
 .DS_Store
 .history/
 .ipynb_checkpoints
