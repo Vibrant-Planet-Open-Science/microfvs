@@ -71,6 +71,49 @@ With this setup, clients reach `https://example.org/microfvs/docs`; nginx forwar
 Once the web service is up-and-running, interact with endpoints using the external URL pattern—for example `https://example.org/microfvs/run` when the default root path is in effect, or `http://localhost:<your-port>/<endpoint>` when running at the site root locally. 
 
 
+## Releases and published images
+
+Versioning is automated with [Release Please](https://github.com/googleapis/release-please). You don't tag or bump versions by hand:
+
+1. Merge PRs to `main` as usual. Because this repo squash-merges, the **PR title becomes the commit subject** and must follow [Conventional Commits](https://www.conventionalcommits.org/) (enforced by the `Validate PR Title` check).
+2. Release Please keeps an open **"Release PR"** that accumulates the changelog and the next semver version.
+3. Merging that Release PR creates the GitHub release + git tag and triggers the image build-and-publish.
+
+### Conventional Commit prefixes → version bump
+
+| PR-title prefix | Example | Bump |
+| --- | --- | --- |
+| `fix:` | `fix: bump FVS_TAG to FS2026.2` | patch (`0.1.0` → `0.1.1`) |
+| `feat:` | `feat: add stand summary endpoint` | minor (`0.1.0` → `0.2.0`) |
+| `feat!:` / `BREAKING CHANGE:` | `feat!: change /run response schema` | major (`0.1.0` → `1.0.0`) |
+| `docs:` `build:` `ci:` `chore:` `refactor:` `test:` | — | no release on their own |
+
+An **`FVS_TAG` upgrade with no source changes is a patch** — commit it as `fix:` so it cuts a release (dependency/`chore`-type prefixes appear in the changelog but do not bump the version).
+
+Because `ci:`/`chore:`-type merges never bump the version, no Release PR appears until the first `fix:` or `feat:` lands after this workflow merges. To cut a release without waiting for one (e.g. for the first deploy), merge any PR with a `Release-As: x.y.z` footer in its description.
+
+### Registries and tags
+
+When a release is cut, the deployable `microfvs` Docker stage (linux/amd64) is built and, after the test suite and a runtime health check pass, pushed to two registries:
+
+- **Public (open science):** `ghcr.io/vibrant-planet-open-science/microfvs` — pull without any credentials, mirroring the [`usfs-fvs`](https://ghcr.io/vibrant-planet-open-science/usfs-fvs) base image. External users (universities etc.) can run the service directly:
+  ```bash
+  docker run -p 8080:8080 ghcr.io/vibrant-planet-open-science/microfvs:v0.1.0
+  ```
+- **Private (Vibrant Planet deployment):** an Amazon ECR repository (`vibrant-planet/microfvs`, `us-west-2`) used by Vibrant Planet's hosted service.
+
+Each release publishes three tags to both registries:
+
+- `vX.Y.Z` — immutable semver; the tag deployments pin to.
+- `sha-<short-commit>` — immutable; the exact source commit the release was built from.
+- `latest` — moving pointer to the most recent release.
+
+### FVS version pinning
+
+The image bakes in FVS binaries copied from `ghcr.io/vibrant-planet-open-science/usfs-fvs:<FVS_TAG>`. Both PR CI and the release workflow pin `FVS_TAG` (currently `FS2026.1`). Newer FVS releases exist; bump the `FVS_TAG` env in both workflows deliberately in a dedicated `fix:` PR so the change is reviewable and cuts a patch release.
+
+This repository only builds and publishes images; deployment is handled separately in Vibrant Planet's infrastructure repository.
+
 ## Development
 
 A **dev container** is provided under [`.devcontainer/`](.devcontainer/) for VS Code and Cursor. Open the repository with **Dev Containers: Reopen in Container** to get the `dev` Docker target, Python tooling, and extensions preconfigured. On first open, `postCreateCommand` runs `uv sync --frozen --extra dev` (creating a project-local `.venv` in your clone, gitignored) and installs pre-commit hooks. After pulling changes that touch the Dockerfile or lockfile, **rebuild** the dev container (or run `uv sync --extra dev` manually).

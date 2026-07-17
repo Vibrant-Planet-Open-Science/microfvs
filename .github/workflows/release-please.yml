@@ -1,0 +1,159 @@
+name: Release
+
+# Release Please drives versioning from Conventional Commit messages. On every
+# push to main it maintains a "Release PR" that accumulates the changelog and
+# the next semver bump. Merging that Release PR creates the GitHub release +
+# git tag, which in turn gates the build-and-publish jobs below.
+#
+# Publishing runs ONLY when a release is created — never on ordinary pushes and
+# never on pull_request, so fork PRs cannot reach the OIDC role. The publish
+# jobs run in the same workflow run as release-please (gated on its output)
+# because a tag created with GITHUB_TOKEN does not re-trigger workflows.
+#
+# The AWS role ARN (which embeds the account id) is NOT stored in this public
+# repo — it is read from the AWS_ECR_PUSH_ROLE_ARN Actions secret. The ECR
+# registry host is discovered at runtime from amazon-ecr-login.
+
+on:
+  push:
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  FVS_TAG: FS2026.1   # FS2026.2 exists — bump deliberately, keep in sync with PR CI
+  AWS_REGION: us-west-2
+  ECR_REPOSITORY: vibrant-planet/microfvs
+  GHCR_IMAGE: ghcr.io/vibrant-planet-open-science/microfvs
+  LOCAL_IMAGE: microfvs:publish
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write        # create the release + tag, commit the Release PR
+      pull-requests: write    # open/update the Release PR
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+      version: ${{ steps.release.outputs.version }}
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  # Gate: run the test suite against the exact release tree before publishing.
+  test:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: dev
+          tags: microfvs-ci:dev
+          load: true
+          build-args: FVS_TAG=${{ env.FVS_TAG }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Run tests inside dev image
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/workspaces/microfvs" \
+            -w /workspaces/microfvs \
+            -e PYTHONPATH=/workspaces/microfvs \
+            microfvs-ci:dev \
+            bash -c 'uv sync --frozen --extra dev && uv run pytest .'
+
+  publish:
+    needs: [release-please, test]
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write   # OIDC token for AWS AssumeRole
+      contents: read
+      packages: write   # push to GHCR
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: docker/setup-buildx-action@v3
+
+      # Build the deployable image once (linux/amd64 for ECS Fargate) and load
+      # it locally so we can smoke-test the exact artifact we push.
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: microfvs
+          platforms: linux/amd64
+          tags: ${{ env.LOCAL_IMAGE }}
+          load: true
+          build-args: FVS_TAG=${{ env.FVS_TAG }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke test runtime image
+        run: |
+          set -euo pipefail
+          docker run -d --rm -p 8080:8080 --name microfvs-smoke "${LOCAL_IMAGE}"
+          ok=
+          for _ in $(seq 30); do
+            if curl -fsS http://localhost:8080/healthcheck >/dev/null; then
+              ok=1; break
+            fi
+            sleep 2
+          done
+          docker logs microfvs-smoke || true
+          docker rm -f microfvs-smoke >/dev/null 2>&1 || true
+          if [ -z "${ok}" ]; then
+            echo "healthcheck did not become ready" >&2
+            exit 1
+          fi
+          echo "healthcheck ok"
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ECR_PUSH_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Tag and push to ECR and GHCR
+        env:
+          ECR_IMAGE: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}
+          VERSION_TAG: ${{ needs.release-please.outputs.tag_name }}
+        run: |
+          set -euo pipefail
+          short_sha="$(git rev-parse --short=7 HEAD)"
+          tags="${VERSION_TAG} sha-${short_sha} latest"
+          for repo in "${ECR_IMAGE}" "${GHCR_IMAGE}"; do
+            for tag in ${tags}; do
+              docker tag "${LOCAL_IMAGE}" "${repo}:${tag}"
+              docker push "${repo}:${tag}"
+            done
+          done
+          echo "Published tags: ${tags}"
