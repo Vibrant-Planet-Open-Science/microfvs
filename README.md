@@ -90,6 +90,8 @@ Versioning is automated with [Release Please](https://github.com/googleapis/rele
 
 An **`FVS_TAG` upgrade with no source changes is a patch** — commit it as `fix:` so it cuts a release (dependency/`chore`-type prefixes appear in the changelog but do not bump the version).
 
+Because `ci:`/`chore:`-type merges never bump the version, no Release PR appears until the first `fix:` or `feat:` lands after this workflow merges. To cut a release without waiting for one (e.g. for the first deploy), merge any PR with a `Release-As: x.y.z` footer in its description.
+
 ### Registries and tags
 
 When a release is cut, the deployable `microfvs` Docker stage (linux/amd64) is built and, after the test suite and a runtime health check pass, pushed to two registries:
