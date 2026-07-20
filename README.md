@@ -17,14 +17,14 @@ Use the GitHub website to clone this repo to your machine, or use the command li
 `git clone <repository-url>`
 
 ### Build the Docker container
-Navigate to the root of your local clone of this repository on the command line, then build the container. FVS binaries are copied from a pinned release image (`ghcr.io/vibrant-planet-open-science/usfs-fvs:FS2026.1` by default, but feel free to try `ghcr.io/vibrant-planet-open-science/usfs-fvs:latest`), so the build should complete in a few minutes:
+Navigate to the root of your local clone of this repository on the command line, then build the container. FVS binaries are copied from a pinned release image (`ghcr.io/vibrant-planet-open-science/usfs-fvs:FS2026.2` by default, but feel free to try `ghcr.io/vibrant-planet-open-science/usfs-fvs:latest`), so the build should complete in a few minutes:
 ```
 cd microfvs
 docker build --target microfvs -t microfvs .
 ```
 To use a different FVS release tag, pass `FVS_TAG` as a build argument, for example:
 ```
-docker build --target microfvs --build-arg FVS_TAG=FS2026.1 -t microfvs .
+docker build --target microfvs --build-arg FVS_TAG=FS2026.2 -t microfvs .
 ```
 or 
 ```
@@ -110,7 +110,7 @@ Each release publishes three tags to both registries:
 
 ### FVS version pinning
 
-The image bakes in FVS binaries copied from `ghcr.io/vibrant-planet-open-science/usfs-fvs:<FVS_TAG>`. Both PR CI and the release workflow pin `FVS_TAG` (currently `FS2026.1`). Newer FVS releases exist; bump the `FVS_TAG` env in both workflows deliberately in a dedicated `fix:` PR so the change is reviewable and cuts a patch release.
+The image bakes in FVS binaries copied from `ghcr.io/vibrant-planet-open-science/usfs-fvs:<FVS_TAG>`. Both PR CI and the release workflow pin `FVS_TAG` (currently `FS2026.2`). Newer FVS releases exist; bump the `FVS_TAG` env in both workflows deliberately in a dedicated `fix:` PR so the change is reviewable and cuts a patch release.
 
 This repository only builds and publishes images; deployment is handled separately in Vibrant Planet's infrastructure repository.
 

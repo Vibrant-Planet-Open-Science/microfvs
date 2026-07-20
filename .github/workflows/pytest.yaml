@@ -6,7 +6,7 @@ permissions:
   contents: read
 
 env:
-  FVS_TAG: FS2026.1
+  FVS_TAG: FS2026.2
   CI_IMAGE: microfvs-ci:dev
 
 jobs:
