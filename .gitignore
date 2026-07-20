@@ -1,12 +1,12 @@
 .ci-changed-notebooks
 __pycache__/
-.devcontainer/devcontainer.local.json
+.devcontainer/
 .DS_Store
 .history/
 .ipynb_checkpoints
 .pytest_cache/
 .vscode/
-
+.cursor/
 
 # Distribution / packaging
 .Python
