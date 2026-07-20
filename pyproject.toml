@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "microfvs"
-version = "0.1.0"
+version = "0.1.1"
 description = "Web service for running the Forest Vegetation Simulator."
 authors = [
     { name = "David Diaz", email = "ddiaz@vibranplanet.net" }
