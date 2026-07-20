@@ -21,7 +21,7 @@ jobs:
         with:
           context: .
           target: dev
-          tags: ${{ env.CI_IMAGE }}s
+          tags: ${{ env.CI_IMAGE }}
           load: true
           build-args: FVS_TAG=${{ env.FVS_TAG }}
           cache-from: type=gha
