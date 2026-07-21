@@ -3,10 +3,13 @@ ARG FVS_IMAGE=ghcr.io/vibrant-planet-open-science/usfs-fvs:${FVS_TAG}
 
 FROM ${FVS_IMAGE} AS fvs-python-base
 ENV DEBIAN_FRONTEND=noninteractive
+# Upgrade inherited base-image packages to pull in security patches, and
+# install only python3 (uv creates its own venv, so python3-venv — which
+# drags in the vulnerable python3-pip-whl — is unnecessary).
 RUN apt-get update \
+    && apt-get upgrade -y --no-install-recommends \
     && apt-get install -y --no-install-recommends \
     python3 \
-    python3-venv \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=ghcr.io/astral-sh/uv:0.7 /uv /uvx /bin/
 
