@@ -95,6 +95,11 @@ jobs:
 
       # Build the deployable image once (linux/amd64 for ECS Fargate) and load
       # it locally so we can smoke-test the exact artifact we push.
+      #
+      # fvs-python-base is exempted from the layer cache: its `apt-get upgrade`
+      # keys on the (pinned) base digest plus the command string, so a cache hit
+      # would republish whatever package set was current when the layer was first
+      # built. Newly published Ubuntu security updates would be silently skipped.
       - uses: docker/build-push-action@v7
         with:
           context: .
@@ -105,6 +110,7 @@ jobs:
           build-args: FVS_TAG=${{ env.FVS_TAG }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          no-cache-filters: fvs-python-base
 
       - name: Smoke test runtime image
         run: |
