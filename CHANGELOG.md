@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/Vibrant-Planet-Open-Science/microfvs/compare/v0.1.2...v0.1.3) (2026-07-29)
+
+
+### Bug Fixes
+
+* rebuild published image to clear base-image CVEs ([#44](https://github.com/Vibrant-Planet-Open-Science/microfvs/issues/44)) ([ed8f3d8](https://github.com/Vibrant-Planet-Open-Science/microfvs/commit/ed8f3d8bf0752e848ecaaa67a352b1398373be56))
+
 ## [0.1.2](https://github.com/Vibrant-Planet-Open-Science/microfvs/compare/v0.1.1...v0.1.2) (2026-07-22)
 
 
