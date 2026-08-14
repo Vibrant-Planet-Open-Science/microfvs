@@ -1,0 +1,32 @@
+{{- if .Values.ingress.enabled }}
+{{- $host := required "ingress.host is supplied by CI" .Values.ingress.host }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "microfvs.name" . }}
+  labels:
+    {{- include "microfvs.labels" . | nindent 4 }}
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: {{ .Values.healthcheckPath }}
+    alb.ingress.kubernetes.io/target-type: ip
+    # Lets the platform's DNS controller own the record, so it follows a replaced load
+    # balancer instead of stranding.
+    external-dns.alpha.kubernetes.io/hostname: {{ $host | quote }}
+spec:
+  # Scheme, subnets, certificates and load-balancer grouping all come from the parameters
+  # behind this class. The chart provisions no load balancer of its own.
+  ingressClassName: {{ required "ingress.className is supplied by CI" .Values.ingress.className }}
+  rules:
+    {{- range concat (list $host) .Values.ingress.extraHosts }}
+    - host: {{ . | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "microfvs.name" $ }}
+                port:
+                  name: http
+    {{- end }}
+{{- end }}

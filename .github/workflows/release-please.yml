@@ -163,3 +163,43 @@ jobs:
             done
           done
           echo "Published tags: ${tags}"
+
+  # Deploy: render the chart for each stage and commit it to the private deployment
+  # repository, where Argo CD syncs it. Dev goes out with the release; prod waits on the
+  # `prod` Environment's reviewers, so a release reaches production only once someone
+  # approves it and dev has had a chance to prove the build.
+  #
+  # Rollback is a revert in the deployment repository, not a re-run here.
+  deploy-dev:
+    needs: [release-please, publish]
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    uses: ./.github/workflows/publish-manifests.yml
+    with:
+      stage: dev
+      image_tag: ${{ needs.release-please.outputs.tag_name }}
+    secrets:
+      aws_role_arn: ${{ secrets.AWS_ECR_PUSH_ROLE_ARN }}
+      deploy_app_id: ${{ secrets.DEPLOY_APP_ID }}
+      deploy_app_private_key: ${{ secrets.DEPLOY_APP_PRIVATE_KEY }}
+      deploy_owner: ${{ secrets.DEPLOY_OWNER }}
+      deploy_repo: ${{ secrets.DEPLOY_REPO_DEV }}
+      deploy_path: ${{ secrets.DEPLOY_PATH_DEV }}
+      deploy_host: ${{ secrets.DEPLOY_HOST_DEV }}
+      deploy_ingress_class: ${{ secrets.DEPLOY_INGRESS_CLASS }}
+
+  deploy-prod:
+    needs: [release-please, deploy-dev]
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    uses: ./.github/workflows/publish-manifests.yml
+    with:
+      stage: prod
+      image_tag: ${{ needs.release-please.outputs.tag_name }}
+    secrets:
+      aws_role_arn: ${{ secrets.AWS_ECR_PUSH_ROLE_ARN }}
+      deploy_app_id: ${{ secrets.DEPLOY_APP_ID }}
+      deploy_app_private_key: ${{ secrets.DEPLOY_APP_PRIVATE_KEY }}
+      deploy_owner: ${{ secrets.DEPLOY_OWNER }}
+      deploy_repo: ${{ secrets.DEPLOY_REPO_PROD }}
+      deploy_path: ${{ secrets.DEPLOY_PATH_PROD }}
+      deploy_host: ${{ secrets.DEPLOY_HOST_PROD }}
+      deploy_ingress_class: ${{ secrets.DEPLOY_INGRESS_CLASS }}

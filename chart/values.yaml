@@ -1,0 +1,56 @@
+# Defaults describe the application itself — ports, probes, resources — and are the same
+# wherever it runs.
+#
+# Deployment-specific values (image registry, hostname, ingress class) are supplied by CI
+# and left empty here. The templates mark them required, so a missing one fails the render
+# instead of producing a placeholder.
+
+image:
+  # Both set at publish time: the registry is resolved then, the tag is the release tag.
+  repository: ""
+  tag: ""
+
+replicaCount: 1
+
+nameOverride: microfvs
+
+serviceAccount:
+  # Created, but intentionally granted nothing: MicroFVS reads no cloud resources at runtime.
+  create: true
+  name: microfvs
+
+containerPort: 8080
+healthcheckPath: /healthcheck
+
+resources:
+  requests:
+    cpu: 500m
+    memory: 1Gi
+  limits:
+    memory: 2Gi
+
+# A /run is CPU-bound and can last minutes to hours.
+#
+# Liveness is slack on purpose: a long run can starve the event loop, and a tight probe would
+# restart the pod mid-run. terminationGracePeriodSeconds covers the drain window on a rollout
+# — a run longer than this still loses its request, which was equally true on ECS.
+terminationGracePeriodSeconds: 300
+probes:
+  startup:
+    periodSeconds: 5
+    failureThreshold: 24
+  readiness:
+    periodSeconds: 10
+    timeoutSeconds: 3
+  liveness:
+    periodSeconds: 30
+    timeoutSeconds: 5
+    failureThreshold: 6
+
+ingress:
+  enabled: true
+  # Both supplied by CI — see the note at the top of this file.
+  className: ""
+  host: ""
+  # Set only if the platform wants this service reachable under a second name.
+  extraHosts: []

@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "microfvs.name" . }}
+  labels:
+    {{- include "microfvs.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "microfvs.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "microfvs.labels" . | nindent 8 }}
+    spec:
+      {{- if .Values.serviceAccount.create }}
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      {{- end }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      containers:
+        - name: {{ include "microfvs.name" . }}
+          image: "{{ required "image.repository is supplied by CI" .Values.image.repository }}:{{ required "image.tag is supplied by CI" .Values.image.tag }}"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: {{ .Values.containerPort }}
+              protocol: TCP
+          # The app runs with --root-path so it is aware of its public prefix, but routes
+          # still mount at the root — probes hit the clean path.
+          startupProbe:
+            httpGet:
+              path: {{ .Values.healthcheckPath }}
+              port: http
+            periodSeconds: {{ .Values.probes.startup.periodSeconds }}
+            failureThreshold: {{ .Values.probes.startup.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.healthcheckPath }}
+              port: http
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.readiness.timeoutSeconds }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.healthcheckPath }}
+              port: http
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
