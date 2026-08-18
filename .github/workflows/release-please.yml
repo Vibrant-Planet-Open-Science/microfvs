@@ -1,14 +1,16 @@
 name: Release
 
-# Release Please drives versioning from Conventional Commit messages. On every
-# push to main it maintains a "Release PR" that accumulates the changelog and
-# the next semver bump. Merging that Release PR creates the GitHub release +
-# git tag, which in turn gates the build-and-publish jobs below.
+# Release Please drives versioning from Conventional Commit messages. On every push to
+# main it maintains a "Release PR" accumulating the changelog and the next semver bump.
 #
-# Publishing runs ONLY when a release is created — never on ordinary pushes and
-# never on pull_request, so fork PRs cannot reach the OIDC role. The publish
-# jobs run in the same workflow run as release-please (gated on its output)
-# because a tag created with GITHUB_TOKEN does not re-trigger workflows.
+#   merge to main      test, build, push, deploy DEV at sha-<short>
+#   merge the Release  the above at the release tag, then deploy PROD, which waits on
+#   PR                 the `prod` Environment's reviewers
+#
+# Nothing runs on pull_request, so a fork PR cannot reach the OIDC role. Prod deploys
+# live in this workflow rather than a `release: published` one because release-please
+# creates the release with GITHUB_TOKEN, and events from GITHUB_TOKEN do not trigger
+# workflows.
 #
 # The AWS role ARN (which embeds the account id) is NOT stored in this public
 # repo — it is read from the AWS_ECR_PUSH_ROLE_ARN Actions secret. The ECR
@@ -49,10 +51,8 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
-  # Gate: run the test suite against the exact release tree before publishing.
   test:
     needs: release-please
-    if: ${{ needs.release-please.outputs.release_created == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -82,8 +82,9 @@ jobs:
 
   publish:
     needs: [release-please, test]
-    if: ${{ needs.release-please.outputs.release_created == 'true' }}
     runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.push.outputs.image_tag }}
     permissions:
       id-token: write   # OIDC token for AWS AssumeRole
       contents: read
@@ -149,34 +150,35 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Tag and push to ECR and GHCR
+        id: push
         env:
           ECR_IMAGE: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}
           VERSION_TAG: ${{ needs.release-please.outputs.tag_name }}
         run: |
           set -euo pipefail
           short_sha="$(git rev-parse --short=7 HEAD)"
-          tags="${VERSION_TAG} sha-${short_sha} latest"
+          # VERSION_TAG is empty unless this push merged the Release PR.
+          tags="sha-${short_sha} latest ${VERSION_TAG}"
           for repo in "${ECR_IMAGE}" "${GHCR_IMAGE}"; do
             for tag in ${tags}; do
               docker tag "${LOCAL_IMAGE}" "${repo}:${tag}"
               docker push "${repo}:${tag}"
             done
           done
+          echo "image_tag=sha-${short_sha}" >> "$GITHUB_OUTPUT"
           echo "Published tags: ${tags}"
 
-  # Deploy: render the chart for each stage and commit it to the private deployment
-  # repository, where Argo CD syncs it. Dev goes out with the release; prod waits on the
-  # `prod` Environment's reviewers, so a release reaches production only once someone
-  # approves it and dev has had a chance to prove the build.
+  # Render the chart for each stage and commit it to the private deployment repository,
+  # where Argo CD syncs it. Rollback is a revert there, not a re-run here.
   #
-  # Rollback is a revert in the deployment repository, not a re-run here.
+  # tag_name is set only on the push that merged the Release PR, so dev lands at the
+  # release tag then and at the commit sha otherwise.
   deploy-dev:
     needs: [release-please, publish]
-    if: ${{ needs.release-please.outputs.release_created == 'true' }}
     uses: ./.github/workflows/publish-manifests.yml
     with:
       stage: dev
-      image_tag: ${{ needs.release-please.outputs.tag_name }}
+      image_tag: ${{ needs.release-please.outputs.tag_name || needs.publish.outputs.image_tag }}
     secrets:
       aws_role_arn: ${{ secrets.AWS_ECR_PUSH_ROLE_ARN }}
       deploy_app_id: ${{ secrets.DEPLOY_APP_ID }}
@@ -187,6 +189,8 @@ jobs:
       deploy_host: ${{ secrets.DEPLOY_HOST_DEV }}
       deploy_ingress_class: ${{ secrets.DEPLOY_INGRESS_CLASS }}
 
+  # Only a release reaches prod, and only after the `prod` Environment's reviewers
+  # approve and dev has taken the same artifact.
   deploy-prod:
     needs: [release-please, deploy-dev]
     if: ${{ needs.release-please.outputs.release_created == 'true' }}
