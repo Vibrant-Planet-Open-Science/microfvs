@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.4](https://github.com/Vibrant-Planet-Open-Science/microfvs/compare/v0.1.3...v0.1.4) (2026-08-25)
+
+
+### Features
+
+* deploy via GitOps with a Helm chart rendered by CI ([#46](https://github.com/Vibrant-Planet-Open-Science/microfvs/issues/46)) ([6f1c4cf](https://github.com/Vibrant-Planet-Open-Science/microfvs/commit/6f1c4cfaa5fe9598875a0a1b38d362141753e9d2))
+
+
+### Bug Fixes
+
+* **ci:** grant the reusable deploy jobs the permissions they request ([#47](https://github.com/Vibrant-Planet-Open-Science/microfvs/issues/47)) ([b71ba4f](https://github.com/Vibrant-Planet-Open-Science/microfvs/commit/b71ba4f0c9f2c75a27fcfe10ebfa50f2b0d047bb))
+
 ## [0.1.3](https://github.com/Vibrant-Planet-Open-Science/microfvs/compare/v0.1.2...v0.1.3) (2026-07-29)
 
 
