@@ -181,6 +181,12 @@ jobs:
   # release tag then and at the commit sha otherwise.
   deploy-dev:
     needs: [release-please, publish]
+    # A called workflow's jobs cannot exceed the permissions of the job that calls it, and
+    # the workflow default here is `{}`. Without this block the called `publish` job is
+    # capped at `none` and the workflow fails to parse.
+    permissions:
+      id-token: write   # OIDC, to read the registry host
+      contents: read
     uses: ./.github/workflows/publish-manifests.yml
     with:
       stage: dev
@@ -200,6 +206,9 @@ jobs:
   deploy-prod:
     needs: [release-please, deploy-dev]
     if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    permissions:
+      id-token: write
+      contents: read
     uses: ./.github/workflows/publish-manifests.yml
     with:
       stage: prod
