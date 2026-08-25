@@ -157,16 +157,22 @@ jobs:
         run: |
           set -euo pipefail
           short_sha="$(git rev-parse --short=7 HEAD)"
-          # VERSION_TAG is empty unless this push merged the Release PR.
-          tags="sha-${short_sha} latest ${VERSION_TAG}"
           for repo in "${ECR_IMAGE}" "${GHCR_IMAGE}"; do
+            # VERSION_TAG is empty unless this push merged the Release PR.
+            tags="sha-${short_sha} ${VERSION_TAG}"
+            # Nothing in the pipeline reads `latest` — Argo CD deploys a pinned tag. It is
+            # kept only for people pulling the public GHCR image by hand, and only ever
+            # points at a release, never at unreleased main.
+            if [ "${repo}" = "${GHCR_IMAGE}" ] && [ -n "${VERSION_TAG}" ]; then
+              tags="${tags} latest"
+            fi
             for tag in ${tags}; do
               docker tag "${LOCAL_IMAGE}" "${repo}:${tag}"
               docker push "${repo}:${tag}"
             done
+            echo "Published to ${repo}: ${tags}"
           done
           echo "image_tag=sha-${short_sha}" >> "$GITHUB_OUTPUT"
-          echo "Published tags: ${tags}"
 
   # Render the chart for each stage and commit it to the private deployment repository,
   # where Argo CD syncs it. Rollback is a revert there, not a re-run here.

@@ -4,7 +4,7 @@
 
 {{- define "microfvs.labels" -}}
 app.kubernetes.io/name: {{ include "microfvs.name" . }}
-app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+app.kubernetes.io/version: {{ required "image.tag is supplied by CI" .Values.image.tag | quote }}
 app.kubernetes.io/managed-by: argocd
 {{- end -}}
 

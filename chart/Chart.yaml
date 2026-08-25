@@ -3,6 +3,6 @@ name: microfvs
 description: MicroFVS API — a stateless HTTP wrapper around the FVS CLI
 type: application
 # Never published to a registry: CI renders this chart with `helm template` and commits the
-# output to the deployment repository. Version tracks the chart, appVersion the image.
+# output to the deployment repository. Version tracks the chart; the deployed artifact is
+# identified by image.tag, which is also the app.kubernetes.io/version label.
 version: 0.1.0
-appVersion: "0.0.0"
