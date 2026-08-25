@@ -1,0 +1,145 @@
+name: Publish manifests
+
+# Renders the chart for one stage and commits the result to the deployment repository,
+# where Argo CD picks it up. Called once per stage by release-please.yml.
+#
+# The deployment target — repository, path, hostname, ingress class — arrives as secrets;
+# the image registry is resolved at run time from amazon-ecr-login.
+#
+# The commit is made with a GitHub App installation token minted per run and scoped to the
+# single target repository, so no long-lived write credential is needed.
+on:
+  workflow_call:
+    inputs:
+      stage:
+        description: "Deployment stage; also selects the GitHub Environment that gates it."
+        required: true
+        type: string
+      image_tag:
+        description: "Release tag to deploy. Its image is already in the registry."
+        required: true
+        type: string
+    secrets:
+      aws_role_arn:
+        required: true
+      deploy_app_id:
+        required: true
+      deploy_app_private_key:
+        required: true
+      deploy_owner:
+        required: true
+      deploy_repo:
+        required: true
+      deploy_path:
+        required: true
+      deploy_host:
+        required: true
+      deploy_ingress_class:
+        required: true
+
+permissions: {}
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    # Reviewers on the environment are what gate a stage; `dev` normally has none.
+    environment: ${{ inputs.stage }}
+    permissions:
+      id-token: write   # OIDC, to read the registry host
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.aws_role_arn }}
+          aws-region: us-west-2
+
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.16.3
+
+      - name: Render manifests
+        env:
+          IMAGE_REPOSITORY: ${{ steps.login-ecr.outputs.registry }}/vibrant-planet/microfvs
+          IMAGE_TAG: ${{ inputs.image_tag }}
+          INGRESS_HOST: ${{ secrets.deploy_host }}
+          INGRESS_CLASS: ${{ secrets.deploy_ingress_class }}
+        run: |
+          set -euo pipefail
+          mkdir -p rendered
+          helm template microfvs ./chart \
+            --namespace microfvs \
+            --set "image.repository=${IMAGE_REPOSITORY}" \
+            --set "image.tag=${IMAGE_TAG}" \
+            --set "ingress.host=${INGRESS_HOST}" \
+            --set "ingress.className=${INGRESS_CLASS}" \
+            > rendered/microfvs.yaml
+          test -s rendered/microfvs.yaml
+
+      - name: Mint token for the deployment repository
+        id: deploy_token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.deploy_app_id }}
+          private-key: ${{ secrets.deploy_app_private_key }}
+          # The deployment repository is in a different organisation to this one, so the
+          # owner is explicit rather than inherited from this repo.
+          owner: ${{ secrets.deploy_owner }}
+          repositories: ${{ secrets.deploy_repo }}
+
+      - name: Checkout deployment repository
+        uses: actions/checkout@v5
+        with:
+          repository: ${{ secrets.deploy_owner }}/${{ secrets.deploy_repo }}
+          persist-credentials: true
+          token: ${{ steps.deploy_token.outputs.token }}
+          path: deploy-repo
+
+      - name: Stage manifests
+        env:
+          DEPLOY_PATH: ${{ secrets.deploy_path }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
+        run: |
+          set -euo pipefail
+          DEST="deploy-repo/${DEPLOY_PATH}"
+          mkdir -p "${DEST}/manifests"
+          # Replace wholesale, so a manifest dropped from the chart disappears here too and
+          # Argo CD can prune it.
+          rm -f "${DEST}/manifests"/*.yaml
+          cp rendered/microfvs.yaml "${DEST}/manifests/microfvs.yaml"
+          cat > "${DEST}/config.yaml" <<EOF
+          app: microfvs
+          namespace: microfvs
+          image_tag: ${IMAGE_TAG}
+          source_commit: ${{ github.sha }}
+          EOF
+
+      - name: Commit and push
+        working-directory: deploy-repo
+        env:
+          DEPLOY_PATH: ${{ secrets.deploy_path }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
+          STAGE: ${{ inputs.stage }}
+        run: |
+          set -euo pipefail
+          git config user.name "microfvs-release[bot]"
+          git config user.email "microfvs-release[bot]@users.noreply.github.com"
+          git add "${DEPLOY_PATH}"
+          if git diff --cached --quiet; then
+            echo "Manifests already current for ${STAGE} at ${IMAGE_TAG}."
+            exit 0
+          fi
+          git commit -m "microfvs ${STAGE}: ${IMAGE_TAG}"
+          # Other services publish into the same repository.
+          for _ in 1 2 3; do
+            if git push; then exit 0; fi
+            git pull --rebase
+          done
+          echo "Could not push to the deployment repository after 3 attempts." >&2
+          exit 1
