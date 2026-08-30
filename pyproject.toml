@@ -7,9 +7,9 @@ name = "microfvs"
 version = "0.1.4"
 description = "Web service for running the Forest Vegetation Simulator."
 authors = [
-    { name = "David Diaz", email = "ddiaz@vibranplanet.net" }
+    { name = "David Diaz", email = "ddiaz@vibrantplanet.net" }
 ]
-license = "CC-BY-NC-SA-4.0"
+license = "MIT"
 license-files = ["LICENSE"]
 readme = "README.md"
 requires-python = ">=3.12"

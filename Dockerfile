@@ -20,6 +20,7 @@ ENV PATH="/opt/venv/bin:$PATH" \
     VIRTUAL_ENV="/opt/venv"
 
 FROM runtime-base AS microfvs
+LABEL org.opencontainers.image.licenses=MIT
 WORKDIR /code
 COPY pyproject.toml uv.lock /code/
 RUN uv sync --frozen --no-dev --no-install-project
