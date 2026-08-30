@@ -94,6 +94,15 @@ jobs:
 
       - uses: docker/setup-buildx-action@v4
 
+      # Build-time provenance. The static identity labels (title, source,
+      # licenses, ...) are baked into the Dockerfile so they apply to every
+      # build path; revision/version/created are only knowable here. Without
+      # them the published image inherits the FVS base image's values and
+      # reports fvs-build's commit sha and FVS's version as its own.
+      - name: Compute build timestamp
+        id: build-meta
+        run: echo "created=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
       # Build the deployable image once (linux/amd64 for ECS Fargate) and load
       # it locally so we can smoke-test the exact artifact we push.
       #
@@ -109,6 +118,10 @@ jobs:
           tags: ${{ env.LOCAL_IMAGE }}
           load: true
           build-args: FVS_TAG=${{ env.FVS_TAG }}
+          labels: |
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ needs.release-please.outputs.version }}
+            org.opencontainers.image.created=${{ steps.build-meta.outputs.created }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           no-cache-filters: fvs-python-base
