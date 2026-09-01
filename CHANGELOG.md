@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.2.0](https://github.com/Vibrant-Planet-Open-Science/microfvs/compare/v0.1.4...v0.2.0) (2026-09-01)
+
+
+### ⚠ BREAKING CHANGES
+
+* relicense from CC BY-NC-SA 4.0 to MIT ([#49](https://github.com/Vibrant-Planet-Open-Science/microfvs/issues/49))
+
+### Features
+
+* relicense from CC BY-NC-SA 4.0 to MIT ([#49](https://github.com/Vibrant-Planet-Open-Science/microfvs/issues/49)) ([7f4ec41](https://github.com/Vibrant-Planet-Open-Science/microfvs/commit/7f4ec413affff39adaa316f24064638c0f43ab8d))
+
+
+### Bug Fixes
+
+* correct OCI provenance labels inherited from the FVS base image ([#50](https://github.com/Vibrant-Planet-Open-Science/microfvs/issues/50)) ([e80427e](https://github.com/Vibrant-Planet-Open-Science/microfvs/commit/e80427ef8ecbd58d15d18449c4b5690eb822f4ed))
+
 ## [0.1.4](https://github.com/Vibrant-Planet-Open-Science/microfvs/compare/v0.1.3...v0.1.4) (2026-08-25)
 
 
