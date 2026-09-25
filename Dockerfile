@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 ARG FVS_TAG=FS2026.2
 ARG FVS_IMAGE=ghcr.io/vibrant-planet-open-science/usfs-fvs:${FVS_TAG}
 
@@ -22,8 +23,12 @@ ENV PATH="/opt/venv/bin:$PATH" \
 FROM runtime-base AS microfvs
 LABEL org.opencontainers.image.licenses=MIT
 WORKDIR /code
-COPY pyproject.toml uv.lock /code/
-RUN uv sync --frozen --no-dev --no-install-project
+# Bind-mount the project files rather than COPY them: uv.lock also pins the dev
+# extras, and leaving it in the image makes scanners report those packages as
+# present even though they are never installed.
+RUN --mount=type=bind,source=pyproject.toml,target=/code/pyproject.toml \
+    --mount=type=bind,source=uv.lock,target=/code/uv.lock \
+    uv sync --frozen --no-dev --no-install-project
 COPY microfvs /code/microfvs
 EXPOSE 8080
 CMD ["uvicorn", "microfvs.main:app", "--host", "0.0.0.0", "--port", "8080", "--root-path", "/microfvs"]

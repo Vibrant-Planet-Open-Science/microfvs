@@ -44,6 +44,11 @@ jobs:
     runs-on: ubuntu-latest
     # Reviewers on the environment are what gate a stage; `dev` normally has none.
     environment: ${{ inputs.stage }}
+    # One deploy per stage at a time, so a prod deploy waiting on reviewers queues only
+    # later prod deploys and never dev.
+    concurrency:
+      group: deploy-${{ inputs.stage }}
+      cancel-in-progress: false
     permissions:
       id-token: write   # OIDC, to read the registry host
       contents: read
