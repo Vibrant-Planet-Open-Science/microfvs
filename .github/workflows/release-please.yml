@@ -22,9 +22,10 @@ on:
 
 permissions: {}
 
-concurrency:
-  group: release-${{ github.ref }}
-  cancel-in-progress: false
+# Concurrency is set per job, not per run. A run-level group holds the whole run —
+# including a prod deploy waiting on reviewers — so one unapproved release would stall
+# every later build, and the image in the registry would stop picking up security
+# patches. Each deploy stage is serialised in publish-manifests.yml instead.
 
 env:
   FVS_TAG: FS2026.2
@@ -36,6 +37,9 @@ env:
 jobs:
   release-please:
     runs-on: ubuntu-latest
+    concurrency:
+      group: release-please-${{ github.ref }}
+      cancel-in-progress: false
     permissions:
       contents: write        # create the release + tag, commit the Release PR
       pull-requests: write    # open/update the Release PR
@@ -83,6 +87,9 @@ jobs:
   publish:
     needs: [release-please, test]
     runs-on: ubuntu-latest
+    concurrency:
+      group: publish-${{ github.ref }}
+      cancel-in-progress: false
     outputs:
       image_tag: ${{ steps.push.outputs.image_tag }}
     permissions:
