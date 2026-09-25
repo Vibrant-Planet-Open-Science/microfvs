@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.2.1](https://github.com/Vibrant-Planet-Open-Science/microfvs/compare/v0.2.0...v0.2.1) (2026-09-25)
+
+
+### Build System
+
+* **deps:** bump anyio from 4.14.0 to 4.14.2 ([#55](https://github.com/Vibrant-Planet-Open-Science/microfvs/issues/55)) ([62cf4e5](https://github.com/Vibrant-Planet-Open-Science/microfvs/commit/62cf4e58e893bf3e75fbb848870a95e97a60d1d7))
+* **deps:** bump httpcore2 from 2.4.0 to 2.10.0 ([#53](https://github.com/Vibrant-Planet-Open-Science/microfvs/issues/53)) ([8b73d94](https://github.com/Vibrant-Planet-Open-Science/microfvs/commit/8b73d94ebd266d955d0a31a86ce180d7806df01e))
+* **deps:** bump httpx2 from 2.10.0 to 2.12.0 ([#54](https://github.com/Vibrant-Planet-Open-Science/microfvs/issues/54)) ([63c0e9a](https://github.com/Vibrant-Planet-Open-Science/microfvs/commit/63c0e9a76b5d8d1f9e2d4582cf59f50299f68fc3))
+* **deps:** bump tornado from 6.5.7 to 6.5.8 ([#52](https://github.com/Vibrant-Planet-Open-Science/microfvs/issues/52)) ([55e881e](https://github.com/Vibrant-Planet-Open-Science/microfvs/commit/55e881ee4840127c8e937fb3beb9659ad076aa03))
+
 ## [0.2.0](https://github.com/Vibrant-Planet-Open-Science/microfvs/compare/v0.1.4...v0.2.0) (2026-09-01)
 
 
