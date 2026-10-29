@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/Vibrant-Planet-Open-Science/microfvs/compare/v0.2.1...v0.2.2) (2026-10-29)
+
+
+### Build System
+
+* **deps:** bump tornado from 6.5.9 to 6.6 ([#64](https://github.com/Vibrant-Planet-Open-Science/microfvs/issues/64)) ([92307e4](https://github.com/Vibrant-Planet-Open-Science/microfvs/commit/92307e40f4fe2c64a49630cb8c2f2f3853b7b5a8))
+
 ## [0.2.1](https://github.com/Vibrant-Planet-Open-Science/microfvs/compare/v0.2.0...v0.2.1) (2026-10-25)
 
 
