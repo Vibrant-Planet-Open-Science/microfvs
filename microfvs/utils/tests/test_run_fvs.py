@@ -12,7 +12,7 @@ from microfvs.models import (
     FvsStandInit,
     FvsTreeInit,
 )
-from microfvs.utils.run_fvs import run_fvs
+from microfvs.utils.run_fvs import run_fvs, run_fvs_keyfile
 
 EXPECTED_POPULATED_TABLES = [
     FvsOutputTableName.FVS_CASES,
@@ -103,3 +103,16 @@ def test_run_fvs_warns_on_stand_id_mismatch():
             tree_init=TEST_TREEINIT,
         )
     assert isinstance(result, FvsResult)
+
+
+def test_run_fvs_keyfile():
+    keyfile = FvsKeyfile(
+        variant=TEST_STANDINIT.variant,
+        stand_id=TEST_STANDINIT.stand_id,
+        treatments=[TEST_TREATMENT],
+    )
+
+    result = run_fvs_keyfile(TEST_STANDINIT, TEST_TREEINIT, keyfile)
+
+    assert result.return_code == 0
+    assert result.keyfile == keyfile.content

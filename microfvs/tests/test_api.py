@@ -109,6 +109,24 @@ def test_keyfile_missing_required_template_var(client, minimal_keyfile_payload):
     assert "missing_required" in data
 
 
+@pytest.mark.parametrize(
+    ("overrides", "loc"),
+    [
+        ({"variant": "NOT_A_VARIANT"}, ["body", "variant"]),
+        ({"treatments": ["NOT_A_TREATMENT"]}, ["body", "treatments"]),
+        ({"template_params": {"stand_id": "x"}}, ["body"]),
+    ],
+)
+def test_keyfile_invalid_input_returns_422(
+    client, minimal_keyfile_payload, overrides, loc
+):
+    response = client.post(
+        "/keyfile", json={**minimal_keyfile_payload, **overrides}
+    )
+    assert response.status_code == 422
+    assert response.json()["detail"][0]["loc"] == loc
+
+
 # ----------------------------------------------------------------------
 # /run
 # ----------------------------------------------------------------------
@@ -130,3 +148,12 @@ def test_run(client, run_payload):
     data = response.json()
     assert "outfile" in data
     assert len(data["outfile"]) > 0
+
+
+def test_run_unknown_treatment_returns_422(client, run_payload):
+    payload = {**run_payload, "treatments": ["NOT_A_TREATMENT"]}
+    response = client.post("/run", json=payload)
+    assert response.status_code == 422
+    detail = response.json()["detail"][0]
+    assert detail["loc"] == ["body", "treatments"]
+    assert "not a recognized treatment" in detail["msg"]

@@ -17,6 +17,7 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    PrivateAttr,
     computed_field,
     field_serializer,
     field_validator,
@@ -125,13 +126,13 @@ class FvsEventLibrary:
         if event_type == FvsEventType.TREATMENT.value:
             if event_key not in self.treatments:
                 msg = f"{event_key} is not a recognized treatment code."
-                raise IndexError(msg)
+                raise ValueError(msg)
             return self.treatments[event_key]
 
         if event_type == FvsEventType.DISTURBANCE.value:
             if event_key not in self.disturbances:
                 msg = f"{event_key} is not a recognized disturbance code."
-                raise IndexError(msg)
+                raise ValueError(msg)
             return self.disturbances[event_key]
 
         msg = f"{event_type} is not a recognized FvsEventType"
@@ -967,3 +968,97 @@ class FvsOutfileProblem(BaseModel):
 def _indent_block(text: str) -> str:
     """Indent a multi-line string by two levels."""
     return indent(text.strip(), INDENT2)
+
+
+class FvsKeyfileRequest(BaseModel):
+    """Request body for rendering an FVS keyfile.
+
+    Validating the request builds the FvsKeyfile, so invalid inputs
+    (e.g. unknown treatment codes) are reported as request validation
+    errors.
+
+    Args:
+        variant (FvsVariant): Regional FVS variant.
+        stand_id (str | int): Stand identifier.
+        template (str): Jinja2 FVS keyfile template.
+        template_params (dict): Template variables
+            (e.g. num_cycles, cycle_length, custom placeholders).
+        treatments (list[str | FvsEvent] | None): Treatment codes
+            resolved via the event library, or explicit FvsEvents.
+        disturbances (list[str | FvsEvent] | None): Disturbance codes
+            or explicit FvsEvents.
+    """
+
+    variant: FvsVariant
+    stand_id: str | int
+    template: str = FvsKeyfileTemplate.DEFAULT
+    template_params: dict = {}
+    treatments: list[str | FvsEvent] | None = None
+    disturbances: list[str | FvsEvent] | None = None
+    _keyfile: FvsKeyfile = PrivateAttr()
+
+    @model_validator(mode="after")
+    def _build_keyfile(self) -> FvsKeyfileRequest:
+        self._keyfile = FvsKeyfile(
+            variant=self.variant,
+            stand_id=self.stand_id,
+            template=self.template,
+            template_params=self.template_params,
+            treatments=self.treatments,
+            disturbances=self.disturbances,
+        )
+        return self
+
+    @property
+    def keyfile(self) -> FvsKeyfile:
+        """The validated keyfile."""
+        return self._keyfile
+
+
+class FvsRunRequest(BaseModel):
+    """Request body for running FVS on a single stand.
+
+    Validating the request builds the FvsKeyfile, so invalid inputs
+    (e.g. unknown treatment codes) are reported as request validation
+    errors before FVS runs.
+
+    Args:
+        stand_init (FvsStandInit): Stand initialization data.
+        tree_init (FvsTreeInit): Tree initialization data. Defaults to
+            no trees (bare ground).
+        template (str): Jinja2 FVS keyfile template.
+        template_params (dict): Template variables. ``variant`` and
+            ``stand_id`` are derived from ``stand_init``.
+        treatments (list[str | FvsEvent] | None): Treatment codes
+            resolved via the event library, or explicit FvsEvents.
+        disturbances (list[str | FvsEvent] | None): Disturbance codes
+            or explicit FvsEvents.
+        stand_stock_params (FvsStandStockParams): Controls
+            Stand-and-Stock table generation in FVS outputs.
+    """
+
+    stand_init: FvsStandInit
+    tree_init: FvsTreeInit = FvsTreeInit()
+    template: str = FvsKeyfileTemplate.DEFAULT
+    template_params: dict = {}
+    treatments: list[str | FvsEvent] | None = None
+    disturbances: list[str | FvsEvent] | None = None
+    stand_stock_params: FvsStandStockParams = FvsStandStockParams()
+    _keyfile: FvsKeyfile = PrivateAttr()
+
+    @model_validator(mode="after")
+    def _build_keyfile(self) -> FvsRunRequest:
+        self._keyfile = FvsKeyfile(
+            variant=self.stand_init.variant,
+            stand_id=self.stand_init.stand_id,
+            template=self.template,
+            template_params=self.template_params,
+            treatments=self.treatments,
+            disturbances=self.disturbances,
+        )
+        return self
+
+    @property
+    def keyfile(self) -> FvsKeyfile:
+        """The validated keyfile."""
+        return self._keyfile

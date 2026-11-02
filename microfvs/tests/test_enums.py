@@ -101,7 +101,7 @@ def test_lookup_valid_disturbance(library):
 
 
 def test_lookup_invalid_treatment_key_raises(library):
-    with pytest.raises(IndexError, match="not a recognized treatment"):
+    with pytest.raises(ValueError, match="not a recognized treatment"):
         library.lookup(
             event_type=FvsEventType.TREATMENT,
             event_key="NONEXISTENT_KEY_XYZ",
@@ -109,7 +109,7 @@ def test_lookup_invalid_treatment_key_raises(library):
 
 
 def test_lookup_invalid_disturbance_key_raises(library):
-    with pytest.raises(IndexError, match="not a recognized disturbance"):
+    with pytest.raises(ValueError, match="not a recognized disturbance"):
         library.lookup(
             event_type=FvsEventType.DISTURBANCE,
             event_key="NONEXISTENT_KEY_XYZ",
