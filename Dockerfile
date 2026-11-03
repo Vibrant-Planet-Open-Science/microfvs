@@ -23,7 +23,7 @@ FROM runtime-base AS microfvs
 LABEL org.opencontainers.image.licenses=MIT
 WORKDIR /code
 COPY pyproject.toml uv.lock /code/
-RUN uv sync --frozen --no-dev --no-install-project
+RUN uv sync --frozen --no-dev --extra server --no-install-project
 COPY microfvs /code/microfvs
 EXPOSE 8080
 CMD ["uvicorn", "microfvs.main:app", "--host", "0.0.0.0", "--port", "8080", "--root-path", "/microfvs"]
