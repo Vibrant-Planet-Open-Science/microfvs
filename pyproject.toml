@@ -23,6 +23,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+client = ["httpx2"]
 dev = [
     "httpx2",
     "ipykernel",
