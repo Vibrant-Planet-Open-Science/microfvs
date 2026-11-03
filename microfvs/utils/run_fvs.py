@@ -62,6 +62,36 @@ def run_fvs(
     Returns:
         A single FvsResult.
     """
+    keyfile = FvsKeyfile(
+        variant=stand_init.variant,
+        stand_id=stand_init.stand_id,
+        template=template,
+        template_params=template_params,
+        treatments=treatments,
+        disturbances=disturbances,
+    )
+    return run_fvs_keyfile(stand_init, tree_init, keyfile, stand_stock_params)
+
+
+def run_fvs_keyfile(
+    stand_init: FvsStandInit,
+    tree_init: FvsTreeInit | None,
+    keyfile: FvsKeyfile,
+    stand_stock_params: FvsStandStockParams = FvsStandStockParams(),
+) -> FvsResult:
+    """Runs FVS on a single stand using an already-built keyfile.
+
+    Args:
+        stand_init (FvsStandInit): Stand initialization data.
+        tree_init (FvsTreeInit, optional): Tree initialization data. If
+            not provided, bare ground will be simulated.
+        keyfile (FvsKeyfile): Keyfile built for ``stand_init``.
+        stand_stock_params (FvsStandStockParams): Controls
+            Stand-and-Stock table generation in FVS outputs.
+
+    Returns:
+        A single FvsResult.
+    """
     if tree_init is None:
         tree_init_df = pd.DataFrame(
             columns=list(FvsTreeInitRecord.model_fields.keys())
@@ -81,8 +111,6 @@ def run_fvs(
         conn = sqlite3.connect(db_path)
         try:
             stand_data = stand_init.to_dataframe()
-
-            fvs_variant = stand_init.variant
             stand_id = stand_init.stand_id
 
             stand_data.to_sql(
@@ -96,18 +124,6 @@ def run_fvs(
             )
         finally:
             conn.close()
-
-        keyfile_args: dict = {
-            "variant": fvs_variant,
-            "stand_id": stand_id,
-            "template": template,
-            "template_params": template_params,
-        }
-        if treatments is not None:
-            keyfile_args["treatments"] = treatments
-        if disturbances is not None:
-            keyfile_args["disturbances"] = disturbances
-        keyfile = FvsKeyfile(**keyfile_args)
 
         keyfile_path = os.path.join(temp_dir, keyfile.name + ".key")
         with open(keyfile_path, "w") as f:
