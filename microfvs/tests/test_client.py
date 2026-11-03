@@ -4,8 +4,9 @@ import httpx2
 import pandas as pd
 import pytest
 from fastapi.testclient import TestClient
+from pydantic import SecretStr
 
-from microfvs.client import MicroFvsClient
+from microfvs.client import CREDENTIAL_ENV_VARS, MicroFvsClient
 from microfvs.constants import TEST_STANDINIT_RECORDS, TEST_TREEINIT_RECORDS
 from microfvs.exceptions import FvsTemplateRenderError
 from microfvs.main import app
@@ -14,11 +15,27 @@ from microfvs.models import FvsEvent, FvsResult, FvsStandInit, FvsTreeInit
 STAND_INIT = FvsStandInit.model_validate(TEST_STANDINIT_RECORDS[0])
 TREE_INIT = FvsTreeInit.from_records(TEST_TREEINIT_RECORDS)
 SHORT_RUN = {"num_cycles": 2, "cycle_length": 5}
+CREDS = {
+    "client_id": "test-client-id",
+    "client_secret": "test-client-secret",
+    "api_key": "test-api-key",
+    "token_url": "http://auth.test/oauth2/token",
+}
+
+
+@pytest.fixture(autouse=True)
+def no_credential_env(monkeypatch):
+    """Keeps a developer's real credentials out of the tests."""
+    for env_var in CREDENTIAL_ENV_VARS.values():
+        monkeypatch.delenv(env_var, raising=False)
 
 
 @pytest.fixture(scope="module")
 def client():
-    c = MicroFvsClient("http://testserver")
+    with pytest.MonkeyPatch.context() as mp:
+        for env_var in CREDENTIAL_ENV_VARS.values():
+            mp.delenv(env_var, raising=False)
+        c = MicroFvsClient("http://testserver")
     with TestClient(app) as tc:
         c.session = tc
         yield c
@@ -136,3 +153,104 @@ def test_run_omitted_tree_init_uses_server_default(client):
     with pytest.warns(UserWarning, match="bare ground"):
         result = client.run(STAND_INIT, template_params=SHORT_RUN)
     assert isinstance(result, FvsResult)
+
+
+# ----------------------------------------------------------------------
+# auth
+# ----------------------------------------------------------------------
+def auth_client(api_replies=(), **creds):
+    """Returns a client on a mock transport and its request log.
+
+    The token endpoint issues tok1, tok2, ...; API calls return the
+    statuses in `api_replies` in order, then 200.
+    """
+    requests = []
+    replies = list(api_replies)
+
+    def handler(request):
+        requests.append(request)
+        if request.url.host == "auth.test":
+            n = sum(r.url.host == "auth.test" for r in requests)
+            return httpx2.Response(
+                200, json={"access_token": f"tok{n}", "expires_in": 3600}
+            )
+        return httpx2.Response(replies.pop(0) if replies else 200, json={})
+
+    c = MicroFvsClient("http://api.test", **creds)
+    c.session = httpx2.Client(transport=httpx2.MockTransport(handler))
+    return c, requests
+
+
+def token_requests(requests):
+    return [r for r in requests if r.url.host == "auth.test"]
+
+
+def test_no_credentials_sends_no_auth_headers():
+    c, requests = auth_client()
+    c.healthcheck()
+    assert "authorization" not in requests[0].headers
+    assert "x-api-key" not in requests[0].headers
+
+
+@pytest.mark.parametrize("wrap", [str, SecretStr], ids=["str", "SecretStr"])
+def test_auth_headers_and_token_request(wrap):
+    creds = {**CREDS, "client_secret": wrap(CREDS["client_secret"])}
+    creds["api_key"] = wrap(CREDS["api_key"])
+    c, requests = auth_client(**creds)
+    c.healthcheck()
+    token_req, api_req = requests
+    assert token_req.headers["authorization"].startswith("Basic ")
+    assert token_req.content == (
+        b"grant_type=client_credentials&scope=microfvs-api%2Fread"
+    )
+    assert api_req.headers["authorization"] == "Bearer tok1"
+    assert api_req.headers["x-api-key"] == "test-api-key"
+
+
+def test_credentials_from_env(monkeypatch):
+    for name, env_var in CREDENTIAL_ENV_VARS.items():
+        monkeypatch.setenv(env_var, CREDS[name])
+    c, requests = auth_client()
+    c.healthcheck()
+    assert requests[-1].headers["x-api-key"] == "test-api-key"
+
+
+def test_partial_credentials_raise():
+    creds = {k: v for k, v in CREDS.items() if k != "token_url"}
+    with pytest.raises(ValueError, match="MICROFVS_TOKEN_URL") as err:
+        MicroFvsClient("http://api.test", **creds)
+    assert "test-client-secret" not in str(err.value)
+
+
+def test_token_cached_until_near_expiry(monkeypatch):
+    now = [1000.0]
+    monkeypatch.setattr("microfvs.client.time.monotonic", lambda: now[0])
+    c, requests = auth_client(**CREDS)
+    c.healthcheck()
+    c.healthcheck()
+    assert len(token_requests(requests)) == 1
+    now[0] += 3600 - 60
+    c.healthcheck()
+    assert len(token_requests(requests)) == 2
+
+
+def test_401_retries_once_with_fresh_token():
+    c, requests = auth_client([401], **CREDS)
+    c.healthcheck()
+    assert len(token_requests(requests)) == 2
+    assert requests[-1].headers["authorization"] == "Bearer tok2"
+
+
+def test_repeated_401_raises():
+    c, _ = auth_client([401, 401], **CREDS)
+    with pytest.raises(httpx2.HTTPStatusError) as err:
+        c.healthcheck()
+    assert err.value.response.status_code == 401
+
+
+def test_secrets_not_in_repr():
+    c, _ = auth_client(**CREDS)
+    c.healthcheck()
+    shown = repr(c) + repr(vars(c))
+    for secret in ("test-client-secret", "test-api-key", "tok1"):
+        assert secret not in shown
