@@ -83,6 +83,50 @@ MicroFVS can also be installed with pip. Pick the extras for what you need:
 pip install "microfvs[client] @ git+https://github.com/Vibrant-Planet-Open-Science/microfvs"
 ```
 
+### Using the Python client
+`MicroFvsClient` calls the web service and returns MicroFVS objects, so you don't need to build requests or parse JSON yourself.
+
+For a local container, pass its URL. The API routes are served at the root even with the default `--root-path /microfvs`, so leave the prefix off:
+
+```python
+from microfvs.client import MicroFvsClient
+
+client = MicroFvsClient("http://localhost:8080")
+client.healthcheck()
+```
+
+If you also have the hosted-service variables below set in your environment, pass `auth=False` so the client ignores them: `MicroFvsClient("http://localhost:8080", auth=False)`. Otherwise the client raises `ValueError`, since it only sends credentials over https.
+
+For a hosted service, set the following environment variables and create the client with no arguments. Get the values from whoever operates the service, and handle these secrets appropriately (this repo is set up to ignore .env files if you choose to store these values in there).
+
+| Variable | Value | Purpose |
+| --- | --- | --- |
+| `MICROFVS_BASE_URL` | Service URL | Where the client sends API requests |
+| `MICROFVS_TOKEN_URL` | OAuth2 token endpoint | Where the client exchanges its ID and secret for a short-lived access token |
+| `MICROFVS_CLIENT_ID` | OAuth2 client ID | Identifies your application when requesting an access token |
+| `MICROFVS_CLIENT_SECRET` | OAuth2 client secret | Proves your application's identity when requesting an access token |
+| `MICROFVS_API_KEY` | API key | Sent with every request (`x-api-key` header); the API gateway uses it to identify callers and apply usage limits |
+
+```python
+client = MicroFvsClient()
+```
+
+Run a simulation and get an `FvsResult` back:
+
+```python
+from microfvs.enums import FvsOutputTableName
+
+result = client.run(
+    stand_init,  # FvsStandInit
+    tree_init,  # FvsTreeInit
+    template_params={"num_cycles": 10, "cycle_length": 5},
+    treatments=["06-03"],
+)
+result.fvs_data[FvsOutputTableName.FVS_SUMMARY2]
+```
+
+A template missing required variables raises `FvsTemplateRenderError`; other errors raise `httpx2.HTTPStatusError`. The hosted service times out runs longer than about 29 seconds (HTTP 504). See [`examples/Getting Started with MicroFVS.ipynb`](examples/Getting%20Started%20with%20MicroFVS.ipynb) for a full walkthrough.
+
 
 ## Releases and published images
 
