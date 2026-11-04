@@ -876,12 +876,10 @@ name = "microfvs"
 version = "0.2.1"
 source = { editable = "." }
 dependencies = [
-    { name = "fastapi" },
     { name = "jinja2" },
     { name = "pandas" },
     { name = "pydantic" },
     { name = "sqlalchemy" },
-    { name = "uvicorn" },
 ]
 
 [package.optional-dependencies]
@@ -889,6 +887,7 @@ client = [
     { name = "httpx2" },
 ]
 dev = [
+    { name = "fastapi" },
     { name = "httpx2" },
     { name = "ipykernel" },
     { name = "mypy" },
@@ -898,15 +897,20 @@ dev = [
     { name = "pytest-mock" },
     { name = "requests" },
     { name = "ruff" },
+    { name = "uvicorn" },
+]
+server = [
+    { name = "fastapi" },
+    { name = "uvicorn" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "fastapi" },
+    { name = "fastapi", marker = "extra == 'server'" },
     { name = "httpx2", marker = "extra == 'client'" },
-    { name = "httpx2", marker = "extra == 'dev'" },
     { name = "ipykernel", marker = "extra == 'dev'" },
     { name = "jinja2" },
+    { name = "microfvs", extras = ["server", "client"], marker = "extra == 'dev'" },
     { name = "mypy", marker = "extra == 'dev'", specifier = "==2.1.0" },
     { name = "nbval", marker = "extra == 'dev'" },
     { name = "pandas" },
@@ -917,9 +921,9 @@ requires-dist = [
     { name = "requests", marker = "extra == 'dev'" },
     { name = "ruff", marker = "extra == 'dev'", specifier = "==0.15.13" },
     { name = "sqlalchemy" },
-    { name = "uvicorn" },
+    { name = "uvicorn", marker = "extra == 'server'" },
 ]
-provides-extras = ["client", "dev"]
+provides-extras = ["server", "client", "dev"]
 
 [[package]]
 name = "mypy"

@@ -14,18 +14,17 @@ license-files = ["LICENSE"]
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "fastapi",
     "jinja2",
     "pandas",
     "pydantic",
     "sqlalchemy",
-    "uvicorn",
 ]
 
 [project.optional-dependencies]
+server = ["fastapi", "uvicorn"]
 client = ["httpx2"]
 dev = [
-    "httpx2",
+    "microfvs[server,client]",
     "ipykernel",
     "mypy==2.1.0",
     "nbval",

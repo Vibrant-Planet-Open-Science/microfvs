@@ -70,6 +70,19 @@ With this setup, clients reach `https://example.org/microfvs/docs`; nginx forwar
 ### Utilize the web service
 Once the web service is up-and-running, interact with endpoints using the external URL pattern—for example `https://example.org/microfvs/run` when the default root path is in effect, or `http://localhost:<your-port>/<endpoint>` when running at the site root locally. 
 
+### Install as a Python package
+MicroFVS can also be installed with pip. Pick the extras for what you need:
+
+| Install | Use for |
+| --- | --- |
+| `microfvs` | Running FVS locally with `microfvs.utils.run_fvs` (requires FVS binaries on your machine) |
+| `microfvs[client]` | Calling a MicroFVS service from Python with `MicroFvsClient` |
+| `microfvs[server]` | Running the web service without Docker (`uvicorn microfvs.main:app`) |
+
+```bash
+pip install "microfvs[client] @ git+https://github.com/Vibrant-Planet-Open-Science/microfvs"
+```
+
 
 ## Releases and published images
 
