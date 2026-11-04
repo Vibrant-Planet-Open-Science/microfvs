@@ -32,10 +32,7 @@ def no_credential_env(monkeypatch):
 
 @pytest.fixture(scope="module")
 def client():
-    with pytest.MonkeyPatch.context() as mp:
-        for env_var in CREDENTIAL_ENV_VARS.values():
-            mp.delenv(env_var, raising=False)
-        c = MicroFvsClient("http://testserver")
+    c = MicroFvsClient("http://testserver", auth=False)
     with TestClient(app) as tc:
         c.session = tc
         yield c
@@ -213,6 +210,16 @@ def test_credentials_from_env(monkeypatch):
     c, requests = auth_client()
     c.healthcheck()
     assert requests[-1].headers["x-api-key"] == "test-api-key"
+
+
+def test_auth_false_ignores_credentials(monkeypatch):
+    for name, env_var in CREDENTIAL_ENV_VARS.items():
+        monkeypatch.setenv(env_var, CREDS[name])
+    c, requests = auth_client(auth=False)
+    c.healthcheck()
+    assert len(requests) == 1  # no token request
+    assert "authorization" not in requests[0].headers
+    assert "x-api-key" not in requests[0].headers
 
 
 def test_partial_credentials_raise():

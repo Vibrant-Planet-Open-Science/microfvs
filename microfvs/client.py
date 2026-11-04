@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import time
+from collections.abc import Mapping
 from typing import Any
 
 import httpx2
@@ -50,13 +51,14 @@ class MicroFvsClient:
         client_secret: str | SecretStr | None = None,
         api_key: str | SecretStr | None = None,
         token_url: str | None = None,
+        auth: bool = True,
         timeout: float = 30,
     ):
         """Creates a client.
 
         Pass all four credentials (or set their environment variables)
-        to call the hosted service; pass none for an unauthenticated
-        service such as a local container.
+        to call the hosted service; pass none, or `auth=False`, for an
+        unauthenticated service such as a local container.
 
         Args:
             base_url (str, optional): root URL of the service. Falls
@@ -69,6 +71,8 @@ class MicroFvsClient:
                 `x-api-key`. Falls back to `MICROFVS_API_KEY`.
             token_url (str, optional): Cognito OAuth2 token endpoint.
                 Falls back to `MICROFVS_TOKEN_URL`.
+            auth (bool): if False, send no credentials, ignoring any
+                passed in or set in the environment.
             timeout (float): seconds to wait for each request.
 
         Raises:
@@ -82,13 +86,17 @@ class MicroFvsClient:
         self.base_url = base_url.rstrip("/")
         self.session = httpx2.Client(timeout=timeout)
 
-        env = os.environ.get
-        self._client_id = client_id or env(CREDENTIAL_ENV_VARS["client_id"])
+        if not auth:
+            client_id = client_secret = api_key = token_url = None
+        env: Mapping[str, str] = os.environ if auth else {}
+        self._client_id = client_id or env.get(CREDENTIAL_ENV_VARS["client_id"])
         self._client_secret = _secret(
-            client_secret or env(CREDENTIAL_ENV_VARS["client_secret"])
+            client_secret or env.get(CREDENTIAL_ENV_VARS["client_secret"])
         )
-        self._api_key = _secret(api_key or env(CREDENTIAL_ENV_VARS["api_key"]))
-        self._token_url = token_url or env(CREDENTIAL_ENV_VARS["token_url"])
+        self._api_key = _secret(
+            api_key or env.get(CREDENTIAL_ENV_VARS["api_key"])
+        )
+        self._token_url = token_url or env.get(CREDENTIAL_ENV_VARS["token_url"])
         resolved = [
             self._client_id,
             self._client_secret,
