@@ -1,5 +1,33 @@
 # Changelog
 
+## [0.3.0](https://github.com/Vibrant-Planet-Open-Science/microfvs/compare/v0.2.1...v0.3.0) (2026-11-10)
+
+
+### ⚠ BREAKING CHANGES
+
+* move FastAPI and uvicorn into a server extra ([#70](https://github.com/Vibrant-Planet-Open-Science/microfvs/issues/70))
+
+### Features
+
+* add MicroFVSClient ([#68](https://github.com/Vibrant-Planet-Open-Science/microfvs/issues/68)) ([fd46072](https://github.com/Vibrant-Planet-Open-Science/microfvs/commit/fd46072cb1311d046ae7b123cdc2d955aa51f281))
+* authentication for MicroFvsClient ([#69](https://github.com/Vibrant-Planet-Open-Science/microfvs/issues/69)) ([057c3f2](https://github.com/Vibrant-Planet-Open-Science/microfvs/commit/057c3f29e0b94d137a2ffff8972f707f3dfaddbf))
+* move FastAPI and uvicorn into a server extra ([#70](https://github.com/Vibrant-Planet-Open-Science/microfvs/issues/70)) ([f75c106](https://github.com/Vibrant-Planet-Open-Science/microfvs/commit/f75c1063c2b0343fe5eeb45864e9cd4ada547445))
+
+
+### Bug Fixes
+
+* update keyfile and treatment handling to raise 422 on validation errors ([#66](https://github.com/Vibrant-Planet-Open-Science/microfvs/issues/66)) ([fcc0d16](https://github.com/Vibrant-Planet-Open-Science/microfvs/commit/fcc0d16ad613f834c543cb6347cfa6dfb28ab2bf))
+
+
+### Documentation
+
+* document the Python client ([#71](https://github.com/Vibrant-Planet-Open-Science/microfvs/issues/71)) ([d75300d](https://github.com/Vibrant-Planet-Open-Science/microfvs/commit/d75300d16504c332ef10a426cd0f81a003da18d0))
+
+
+### Build System
+
+* **deps:** bump tornado from 6.5.9 to 6.6 ([#64](https://github.com/Vibrant-Planet-Open-Science/microfvs/issues/64)) ([92307e4](https://github.com/Vibrant-Planet-Open-Science/microfvs/commit/92307e40f4fe2c64a49630cb8c2f2f3853b7b5a8))
+
 ## [0.2.1](https://github.com/Vibrant-Planet-Open-Science/microfvs/compare/v0.2.0...v0.2.1) (2026-10-25)
 
 
