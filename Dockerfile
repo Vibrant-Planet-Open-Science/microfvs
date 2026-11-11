@@ -6,6 +6,10 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Upgrade inherited base-image packages to pull in security patches, and
 # install only python3 (uv creates its own venv, so python3-venv — which
 # drags in the vulnerable python3-pip-whl — is unnecessary).
+# The upgrade only sees fixes Ubuntu has published by build time. A fix
+# published after an image was pushed (e.g. perl 5.38.2-3.2ubuntu0.7 for
+# CVE-2026-82560) needs a new build; CI rebuilds this stage uncached on every
+# merge to main. Don't purge perl-base: it is Essential on Ubuntu.
 RUN apt-get update \
     && apt-get upgrade -y --no-install-recommends \
     && apt-get install -y --no-install-recommends \
