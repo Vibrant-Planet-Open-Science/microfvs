@@ -38,7 +38,7 @@ The Docker container running the MicroFVS server listens on port 8080. Forward t
 docker run -p 8080:8080 microfvs
 ```
 
-The container starts Uvicorn with `--root-path /microfvs`, matching typical reverse-proxy deployments. Uvicorn does **not** infer this from `X-Forwarded-Prefix`; it is set in the image `CMD`.
+The container starts Uvicorn with `--root-path /microfvs`, matching typical reverse-proxy deployments. Uvicorn does **not** infer this from `X-Forwarded-Prefix`; it is set in the image `CMD`. The `CMD` also sets `--timeout-keep-alive 65`, above the 60-second idle timeout of an AWS load balancer, so the server never closes a connection the load balancer is about to reuse.
 
 To run at the site root instead (for example a quick local smoke test without nginx), override the command:
 
