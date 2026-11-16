@@ -1,0 +1,5 @@
+# Prod overrides, layered on values.yaml by CI when it renders the prod stage.
+
+# At least 2: with one replica a node drain or rollout is an outage (see the 2026-11-16
+# incident), and the PodDisruptionBudget is only rendered above 1.
+replicaCount: 2

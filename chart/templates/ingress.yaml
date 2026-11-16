@@ -1,5 +1,8 @@
 {{- if .Values.ingress.enabled }}
 {{- $host := required "ingress.host is supplied by CI" .Values.ingress.host }}
+{{- if lt (int .Values.ingress.deregistrationDelaySeconds) (int .Values.preStopSleepSeconds) }}
+{{- fail "ingress.deregistrationDelaySeconds must be at least preStopSleepSeconds, or the ALB cuts requests the pod is still serving" }}
+{{- end }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -9,6 +12,9 @@ metadata:
   annotations:
     alb.ingress.kubernetes.io/healthcheck-path: {{ .Values.healthcheckPath }}
     alb.ingress.kubernetes.io/target-type: ip
+    # Replaces the 300 s default, which held each drained target for five minutes; see
+    # ingress.deregistrationDelaySeconds in values.yaml.
+    alb.ingress.kubernetes.io/target-group-attributes: deregistration_delay.timeout_seconds={{ .Values.ingress.deregistrationDelaySeconds }}
     # Lets the platform's DNS controller own the record, so it follows a replaced load
     # balancer instead of stranding.
     external-dns.alpha.kubernetes.io/hostname: {{ $host | quote }}
