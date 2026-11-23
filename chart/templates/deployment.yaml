@@ -28,13 +28,9 @@ spec:
       {{- end }}
       terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
       {{- if .Values.topologySpread.enabled }}
-      # matchLabelKeys scopes each constraint to one ReplicaSet, so a rollout's surge pod is
-      # not forced off every node that still runs an old pod.
+      # matchLabelKeys: a rollout's surge pod is not counted against old pods' nodes.
       topologySpreadConstraints:
-        # Hard: two replicas on one node is how a single drain takes the service down. On EKS
-        # Auto Mode an unsatisfiable placement makes Karpenter add a node rather than leave
-        # the pod pending, and the PodDisruptionBudget keeps the other replica serving while
-        # it does.
+        # Hard: replicas sharing a node go down together in one drain.
         - topologyKey: kubernetes.io/hostname
           maxSkew: 1
           whenUnsatisfiable: DoNotSchedule
@@ -43,8 +39,7 @@ spec:
               {{- include "microfvs.selectorLabels" . | nindent 14 }}
           matchLabelKeys:
             - pod-template-hash
-        # Soft: zone spread is preferred, but a zone short of capacity must not block a
-        # replacement pod — that would turn a capacity blip into lost redundancy.
+        # Soft: a zone short of capacity must not leave a replacement pod Pending.
         - topologyKey: topology.kubernetes.io/zone
           maxSkew: 1
           whenUnsatisfiable: ScheduleAnyway
@@ -62,8 +57,7 @@ spec:
             - name: http
               containerPort: {{ .Values.containerPort }}
               protocol: TCP
-          # Keeps serving while the ALB deregisters the target; see the shutdown notes in
-          # values.yaml. The native sleep action needs no `sleep` binary in the image.
+          # Native sleep action: needs no `sleep` binary in the image.
           lifecycle:
             preStop:
               sleep:

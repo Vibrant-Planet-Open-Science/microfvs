@@ -1,7 +1,4 @@
-{{- /*
-Only with more than one replica: a budget over a single pod can never be met, so it would
-block every voluntary eviction — node drains and Auto Mode node replacement included.
-*/ -}}
+{{- /* With one replica a budget would block every node drain. */ -}}
 {{- if gt (int .Values.replicaCount) 1 }}
 apiVersion: policy/v1
 kind: PodDisruptionBudget
@@ -10,10 +7,8 @@ metadata:
   labels:
     {{- include "microfvs.labels" . | nindent 4 }}
 spec:
-  # A drain evicts one replica at a time and waits until its replacement is Ready.
   maxUnavailable: 1
-  # A pod that is not Ready is serving nothing, so evicting it costs nothing; without this a
-  # crash-looping pod would hold up a drain.
+  # Otherwise a crash-looping pod blocks drains.
   unhealthyPodEvictionPolicy: AlwaysAllow
   selector:
     matchLabels:

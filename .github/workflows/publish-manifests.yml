@@ -74,8 +74,6 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p rendered
-          # Every stage has an overrides file (replica count, …); a missing one fails here
-          # rather than silently deploying the chart defaults.
           STAGE_VALUES="chart/values-${STAGE}.yaml"
           test -f "${STAGE_VALUES}"
           helm template microfvs ./chart \

@@ -5,17 +5,13 @@
 # and left empty here. The templates mark them required, so a missing one fails the render
 # instead of producing a placeholder.
 #
-# Per-stage overrides live in values-<stage>.yaml next to this file; CI layers the file for
-# the stage it is rendering on top of these defaults.
+# Per-stage overrides are in values-<stage>.yaml.
 
 image:
   # Both set at publish time: the registry is resolved then, the tag is the release tag.
   repository: ""
   tag: ""
 
-# Two replicas, so a node drain or a rollout always leaves one serving. At 1 the chart still
-# renders, but without a PodDisruptionBudget (one with a single pod would block every drain)
-# and a drain or node failure is an outage.
 replicaCount: 2
 
 nameOverride: microfvs
@@ -35,35 +31,23 @@ resources:
   limits:
     memory: 2Gi
 
-# Rollouts add a new pod before removing an old one, so capacity never drops.
 rollingUpdate:
   maxSurge: 1
   maxUnavailable: 0
-# A new pod counts as available only after it has been Ready this long, so a rollout does not
-# remove an old pod before the ALB has health-checked the new one into service (by default
-# 2 checks, 15 s apart).
+# Time for the ALB to health-check a new pod into service (default 2 checks × 15 s).
 minReadySeconds: 30
 
-# Replicas go on different nodes (hard) and, where there is capacity, different zones (soft).
-# See templates/deployment.yaml for why each is hard or soft.
 topologySpread:
   enabled: true
 
 # A /run is CPU-bound and can last minutes to hours.
 #
 # Liveness is slack on purpose: a long run can starve the event loop, and a tight probe would
-# restart the pod mid-run.
-#
-# Shutdown, in order:
-#   1. The pod is marked terminating and leaves the Service endpoints; the load balancer
-#      controller deregisters its target and the ALB stops sending it new requests.
-#   2. preStopSleepSeconds: the app keeps serving while step 1 propagates, so nothing is
-#      routed to a pod that has stopped listening.
-#   3. SIGTERM: uvicorn stops accepting connections and finishes the requests in flight.
-#   4. terminationGracePeriodSeconds after step 1, anything still running is killed. A run
-#      longer than this still loses its request, which was equally true on ECS.
-preStopSleepSeconds: 20
+# restart the pod mid-run. terminationGracePeriodSeconds covers the drain window on a rollout
+# — a run longer than this still loses its request, which was equally true on ECS.
 terminationGracePeriodSeconds: 300
+# Keeps serving until the ALB has stopped routing to the pod, before uvicorn gets SIGTERM.
+preStopSleepSeconds: 20
 probes:
   startup:
     periodSeconds: 5
@@ -83,8 +67,6 @@ ingress:
   host: ""
   # Set only if the platform wants this service reachable under a second name.
   extraHosts: []
-  # How long the ALB lets requests already in flight to a deregistering target finish (the
-  # AWS default is 300 s). It must be at least preStopSleepSeconds — the template enforces
-  # this — and is set a little above it so a request that starts just before deregistration
-  # can run to the 30 s API Gateway integration timeout.
+  # Above preStopSleepSeconds so a request that starts just before deregistration can run to
+  # a 30 s upstream proxy timeout.
   deregistrationDelaySeconds: 30

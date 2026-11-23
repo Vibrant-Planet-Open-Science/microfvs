@@ -1,6 +1,2 @@
-# Dev overrides, layered on values.yaml by CI when it renders the dev stage.
-
-# One replica keeps dev cheap. A drain or node replacement takes dev down briefly; no
-# PodDisruptionBudget is rendered, so it never blocks the drain. Set to 2 to rehearse prod's
-# disruption behaviour here.
+# One replica: no PodDisruptionBudget, so a node drain briefly takes dev down.
 replicaCount: 1
