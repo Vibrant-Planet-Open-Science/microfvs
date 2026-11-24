@@ -11,3 +11,9 @@ If your proposed changes include a breaking change to existing behavior, insert 
 
 ## Testing
 <!-- Describe how the changes you are proposing have been or can be tested. -->
+
+## Checklist
+<!-- This repository is public. -->
+- [ ] No secrets, internal URLs or hostnames, customer data or personal info (including in notebook outputs)
+- [ ] Examples are generic; nothing copied from private code or internal tools
+- [ ] New dependencies or adapted code use MIT-compatible licenses
