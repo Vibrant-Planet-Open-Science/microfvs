@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.2](https://github.com/Vibrant-Planet-Open-Science/microfvs/compare/v0.3.1...v0.3.2) (2026-11-24)
+
+
+### Bug Fixes
+
+* keep MicroFVS serving through node drains and rollouts ([#75](https://github.com/Vibrant-Planet-Open-Science/microfvs/issues/75)) ([3b86136](https://github.com/Vibrant-Planet-Open-Science/microfvs/commit/3b86136cada170e605d6c551f6b7ba1c896c7030))
+
+
+### Documentation
+
+* add public-repo guidelines for contributors and agents ([#76](https://github.com/Vibrant-Planet-Open-Science/microfvs/issues/76)) ([7fd5225](https://github.com/Vibrant-Planet-Open-Science/microfvs/commit/7fd522527b3566a3c5c064914ae7ab72e0b7995a))
+
 ## [0.3.1](https://github.com/Vibrant-Planet-Open-Science/microfvs/compare/v0.3.0...v0.3.1) (2026-11-15)
 
 
