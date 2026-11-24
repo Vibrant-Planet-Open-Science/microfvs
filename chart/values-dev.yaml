@@ -1,0 +1,2 @@
+# One replica: no PodDisruptionBudget, so a node drain briefly takes dev down.
+replicaCount: 1

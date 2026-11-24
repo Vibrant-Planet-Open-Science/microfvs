@@ -26,7 +26,8 @@ COPY pyproject.toml uv.lock /code/
 RUN uv sync --frozen --no-dev --extra server --no-install-project
 COPY microfvs /code/microfvs
 EXPOSE 8080
-CMD ["uvicorn", "microfvs.main:app", "--host", "0.0.0.0", "--port", "8080", "--root-path", "/microfvs"]
+# Keep-alive above the ALB's 60 s idle timeout; uvicorn's 5 s default causes stray 502s.
+CMD ["uvicorn", "microfvs.main:app", "--host", "0.0.0.0", "--port", "8080", "--root-path", "/microfvs", "--timeout-keep-alive", "65"]
 
 FROM fvs-python-base AS dev
 RUN apt-get update \

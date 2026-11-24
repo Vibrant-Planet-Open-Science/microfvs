@@ -36,6 +36,34 @@ jobs:
       # Runs all hooks in .pre-commit-config.yaml (gitleaks, ruff, mypy).
       - uses: pre-commit/action@v3.0.1
 
+  chart:
+    name: Lint and render the Helm chart
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.16.3
+
+      # Placeholders for the values CI supplies at publish time; the chart marks them required.
+      - name: Lint and render each stage
+        run: |
+          set -euo pipefail
+          for values in chart/values-*.yaml; do
+            echo "::group::${values}"
+            args=(
+              --values "${values}"
+              --set image.repository=registry.example/microfvs
+              --set image.tag=ci
+              --set ingress.host=microfvs.example
+              --set ingress.className=alb
+            )
+            helm lint --strict ./chart "${args[@]}"
+            helm template microfvs ./chart --namespace microfvs "${args[@]}" > /dev/null
+            echo "::endgroup::"
+          done
+
   pr-title:
     name: Validate PR Title
     runs-on: ubuntu-latest

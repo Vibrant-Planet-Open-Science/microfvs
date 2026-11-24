@@ -70,11 +70,15 @@ jobs:
           IMAGE_TAG: ${{ inputs.image_tag }}
           INGRESS_HOST: ${{ secrets.deploy_host }}
           INGRESS_CLASS: ${{ secrets.deploy_ingress_class }}
+          STAGE: ${{ inputs.stage }}
         run: |
           set -euo pipefail
           mkdir -p rendered
+          STAGE_VALUES="chart/values-${STAGE}.yaml"
+          test -f "${STAGE_VALUES}"
           helm template microfvs ./chart \
             --namespace microfvs \
+            --values "${STAGE_VALUES}" \
             --set "image.repository=${IMAGE_REPOSITORY}" \
             --set "image.tag=${IMAGE_TAG}" \
             --set "ingress.host=${INGRESS_HOST}" \

@@ -1,0 +1,16 @@
+{{- /* With one replica a budget would block every node drain. */ -}}
+{{- if gt (int .Values.replicaCount) 1 }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "microfvs.name" . }}
+  labels:
+    {{- include "microfvs.labels" . | nindent 4 }}
+spec:
+  maxUnavailable: 1
+  # Otherwise a crash-looping pod blocks drains.
+  unhealthyPodEvictionPolicy: AlwaysAllow
+  selector:
+    matchLabels:
+      {{- include "microfvs.selectorLabels" . | nindent 6 }}
+{{- end }}
